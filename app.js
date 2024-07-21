@@ -12,10 +12,12 @@ pipeTopImg.src = './pipe-top.png'; // Assurez-vous que cette image se trouve dan
 pipeBottomImg.src = './pipe-bottom.png'; // Assurez-vous que cette image se trouve dans le bon répertoire
 pieceImg.src = './piece.png'; // Assurez-vous que cette image se trouve dans le bon répertoire
 
-// general settings
+// General settings
 let gamePlaying = false;
 let gameOver = false;
 let pieceCollected = false;
+let pause = false;
+let pauseStartTime;
 
 const gravity = 0.5,
     speed = 6.2,
@@ -40,23 +42,48 @@ let index = 0,
     pieces = [],
     startTime = null; // Temps de départ pour le délai
 
+const messages = [
+    "Azura c'est 1500 inscriptions déjà !",
+    "C'est aussi 2,5M de lignes de code",
+    "Nous sommes les premiers en france",
+    "Discord bouuuh",
+    "Nul c'est pas nous",
+    "Impressive!",
+    "Amazing!",
+    "Superb!",
+    "Outstanding!",
+    "Bravo!",
+    "Excellent!",
+    "Marvelous!",
+    "Terrific!",
+    "Wonderful!",
+    "Incredible!"
+];
+
+let messageIndex = 0; // Index des messages
+
 // Fonction pour initialiser les tuyaux avec un délai
 const initPipes = () => {
     pipes = Array(3).fill().map((_, i) => [
         canvas.width + i * (pipeWidth + minPipeDistance) + 1000, // Ajoutez un délai de 1000 pixels
-        Math.random() * (canvas.height / 2)
+        Math.random() * (canvas.height / 2),
+        false
     ]);
 };
 
 // Fonction pour initialiser les pièces
 const initPieces = () => {
-    pieces = Array(2).fill().map(() => {
-        const pipe = pipes[Math.floor(Math.random() * pipes.length)];
-        return [
-            pipe[0] + pipeWidth + minPipeDistance / 2, // Positionner la pièce entre les tuyaux
-            pipe[1] + pipeGap / 2 - 15 // Centrer verticalement la pièce entre les tuyaux
-        ];
-    });
+    if (messageIndex < messages.length) {
+        pieces = Array(2).fill().map(() => {
+            const pipe = pipes[Math.floor(Math.random() * pipes.length)];
+            return [
+                pipe[0] + pipeWidth + minPipeDistance / 2, // Positionner la pièce entre les tuyaux
+                pipe[1] + pipeGap / 2 - 15 // Centrer verticalement la pièce entre les tuyaux
+            ];
+        });
+    } else {
+        pieces = []; // Arrêter de générer des pièces après 15 messages
+    }
 };
 
 // Fonction pour vérifier les collisions avec les tuyaux
@@ -117,6 +144,8 @@ const checkPieceCollision = (piece) => {
 // Fonction pour afficher un message en pop-up et mettre le jeu en pause
 const showMessage = (message) => {
     pieceCollected = true;
+    pause = true;
+    pauseStartTime = performance.now(); // Enregistrer le temps de début de la pause
     const messageDiv = document.createElement('div');
     messageDiv.style.position = 'fixed';
     messageDiv.style.top = '50%';
@@ -132,14 +161,19 @@ const showMessage = (message) => {
     document.addEventListener('click', () => {
         document.body.removeChild(messageDiv);
         pieceCollected = false;
+        pause = false;
         gamePlaying = true; // Reprendre le jeu après avoir cliqué sur le message
-        startTime = performance.now(); // Réinitialiser le temps de départ pour reprendre là où on s'était arrêté
+        startTime += performance.now() - pauseStartTime; // Ajuster le temps de départ pour compenser la pause
         window.requestAnimationFrame(render); // Relancer la boucle d'animation
     }, { once: true });
 };
 
 const render = (timestamp) => {
     if (!startTime) startTime = timestamp;
+    if (pause) {
+        return;
+    }
+
     index++;
     const bgX = -((index * (speed / 2)) % bgImg.width);
 
@@ -178,7 +212,10 @@ const render = (timestamp) => {
             ctx.drawImage(pieceImg, piece[0], piece[1], 30, 30);
             if (checkPieceCollision(piece)) {
                 pieces.splice(index, 1);
-                showMessage('Piece collected!');
+                if (messageIndex < messages.length) {
+                    showMessage(messages[messageIndex]);
+                    messageIndex++;
+                }
             }
             if (piece[0] <= -30) {
                 const pipe = pipes[Math.floor(Math.random() * pipes.length)];
@@ -240,8 +277,6 @@ document.addEventListener('click', () => {
         flyHeight = (canvas.height / 2) - (newSize[1] / 2);
         flight = jump;
         score = 0;
-        initPipes();
-        initPieces();
         startTime = null;
     } else if (gameOver) {
         gamePlaying = true;
@@ -249,6 +284,7 @@ document.addEventListener('click', () => {
         flyHeight = (canvas.height / 2) - (newSize[1] / 2);
         flight = jump;
         score = 0;
+        messageIndex = 0; // Réinitialiser l'index des messages lors du redémarrage
         initPipes();
         initPieces();
         startTime = null;
