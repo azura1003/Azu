@@ -18,6 +18,7 @@ let gameOver = false;
 let pieceCollected = false;
 let pause = false;
 let pauseStartTime;
+let piecesPassed = 0;
 
 const gravity = 0.5,
     speed = 6.2,
@@ -43,21 +44,11 @@ let index = 0,
     startTime = null; // Temps de départ pour le délai
 
 const messages = [
-    "Azura c'est 1500 inscriptions déjà !",
-    "C'est aussi 2,5M de lignes de code",
-    "Nous sommes les premiers en france",
-    "Discord bouuuh",
-    "Nul c'est pas nous",
-    "Impressive!",
-    "Amazing!",
-    "Superb!",
-    "Outstanding!",
-    "Bravo!",
-    "Excellent!",
-    "Marvelous!",
-    "Terrific!",
-    "Wonderful!",
-    "Incredible!"
+    "Azura<br> c'est 3 ans de dev!",
+    "1500+ inscriptions<br> organiques",
+    "un réseau social<br> inspiré des jeux",
+    "Unique en son genre",
+    "Attention<br> les obstacles arrivent"
 ];
 
 let messageIndex = 0; // Index des messages
@@ -71,18 +62,13 @@ const initPipes = () => {
     ]);
 };
 
-// Fonction pour initialiser les pièces
-const initPieces = () => {
-    if (messageIndex < messages.length) {
-        pieces = Array(2).fill().map(() => {
-            const pipe = pipes[Math.floor(Math.random() * pipes.length)];
-            return [
-                pipe[0] + pipeWidth + minPipeDistance / 2, // Positionner la pièce entre les tuyaux
-                pipe[1] + pipeGap / 2 - 15 // Centrer verticalement la pièce entre les tuyaux
-            ];
-        });
-    } else {
-        pieces = []; // Arrêter de générer des pièces après 15 messages
+// Fonction pour initialiser une nouvelle pièce
+const initPiece = () => {
+    if (piecesPassed < 5) {
+        pieces.push([
+            canvas.width + 500, // Positionner chaque nouvelle pièce après la précédente
+            canvas.height / 2 - 15 // Centrer la pièce verticalement
+        ]);
     }
 };
 
@@ -142,7 +128,7 @@ const checkPieceCollision = (piece) => {
 };
 
 // Fonction pour afficher un message en pop-up et mettre le jeu en pause
-const showMessage = (message) => {
+const showMessage = (message, callback) => {
     pieceCollected = true;
     pause = true;
     pauseStartTime = performance.now(); // Enregistrer le temps de début de la pause
@@ -156,16 +142,23 @@ const showMessage = (message) => {
     messageDiv.style.color = 'white';
     messageDiv.style.fontSize = '20px';
     messageDiv.style.zIndex = '1000';
-    messageDiv.innerText = message;
+    messageDiv.innerHTML = message; // Utiliser innerHTML pour permettre les sauts de ligne
     document.body.appendChild(messageDiv);
     document.addEventListener('click', () => {
         document.body.removeChild(messageDiv);
         pieceCollected = false;
         pause = false;
-        gamePlaying = true; // Reprendre le jeu après avoir cliqué sur le message
-        startTime += performance.now() - pauseStartTime; // Ajuster le temps de départ pour compenser la pause
+        if (callback) callback(); // Exécuter la fonction de rappel si elle est fournie
         window.requestAnimationFrame(render); // Relancer la boucle d'animation
     }, { once: true });
+};
+
+// Fonction pour afficher le message de bienvenue
+const showWelcomeMessage = () => {
+    showMessage('Hey collectez<br>les pieces.', () => {
+        gamePlaying = true;
+        startTime = performance.now(); // Démarrer le temps après le message de bienvenue
+    });
 };
 
 const render = (timestamp) => {
@@ -184,43 +177,47 @@ const render = (timestamp) => {
     }
 
     if (gamePlaying && !gameOver && !pieceCollected && timestamp - startTime > 300) {
-        pipes.forEach(pipe => {
-            pipe[0] -= speed;
-            ctx.drawImage(pipeTopImg, pipe[0], 0, pipeWidth, pipe[1]);
-            ctx.drawImage(pipeBottomImg, pipe[0], pipe[1] + pipeGap, pipeWidth, canvas.height - pipe[1] - pipeGap);
-            if (pipe[0] + pipeWidth < canvas.width / 2 && !pipe[2]) {
-                score++;
-                pipe[2] = true;
-            }
-            if (checkCollision(pipe)) {
-                gameOver = true;
-                gamePlaying = false;
-                if (score > meilleurScore) {
-                    meilleurScore = score;
-                    localStorage.setItem('meilleurScore', meilleurScore);
+        if (piecesPassed >= 5) {
+            pipes.forEach(pipe => {
+                pipe[0] -= speed;
+                ctx.drawImage(pipeTopImg, pipe[0], 0, pipeWidth, pipe[1]);
+                ctx.drawImage(pipeBottomImg, pipe[0], pipe[1] + pipeGap, pipeWidth, canvas.height - pipe[1] - pipeGap);
+                if (pipe[0] + pipeWidth < canvas.width / 2 && !pipe[2]) {
+                    score++;
+                    pipe[2] = true;
                 }
-            }
-            if (pipe[0] <= -pipeWidth) {
-                pipe[0] = canvas.width + (pipeWidth + minPipeDistance) * (pipes.length - 1);
-                pipe[1] = Math.random() * (canvas.height / 2);
-                pipe[2] = false;
-            }
-        });
+                if (checkCollision(pipe)) {
+                    gameOver = true;
+                    gamePlaying = false;
+                    if (score > meilleurScore) {
+                        meilleurScore = score;
+                        localStorage.setItem('meilleurScore', meilleurScore);
+                    }
+                }
+                if (pipe[0] <= -pipeWidth) {
+                    pipe[0] = canvas.width + (pipeWidth + minPipeDistance) * (pipes.length - 1);
+                    pipe[1] = Math.random() * (canvas.height / 2);
+                    pipe[2] = false;
+                }
+            });
+        }
 
         pieces.forEach((piece, index) => {
             piece[0] -= speed;
             ctx.drawImage(pieceImg, piece[0], piece[1], 30, 30);
             if (checkPieceCollision(piece)) {
                 pieces.splice(index, 1);
+                piecesPassed++;
                 if (messageIndex < messages.length) {
                     showMessage(messages[messageIndex]);
                     messageIndex++;
                 }
+                initPiece(); // Ajouter une nouvelle pièce
             }
             if (piece[0] <= -30) {
-                const pipe = pipes[Math.floor(Math.random() * pipes.length)];
-                piece[0] = pipe[0] + pipeWidth + minPipeDistance / 2;
-                piece[1] = pipe[1] + pipeGap / 2 - 15;
+                pieces.splice(index, 1);
+                piecesPassed++;
+                initPiece(); // Ajouter une nouvelle pièce même si elle a été manquée
             }
         });
     }
@@ -267,26 +264,25 @@ const render = (timestamp) => {
 
 bgImg.onload = () => window.requestAnimationFrame(render);
 
-// Initialiser les tuyaux et les pièces
+// Initialiser les pièces et les tuyaux
+initPiece();
 initPipes();
-initPieces();
 
 document.addEventListener('click', () => {
     if (!gamePlaying && !gameOver && !pieceCollected) {
-        gamePlaying = true;
-        flyHeight = (canvas.height / 2) - (newSize[1] / 2);
-        flight = jump;
-        score = 0;
-        startTime = null;
+        showWelcomeMessage();
     } else if (gameOver) {
         gamePlaying = true;
         gameOver = false;
         flyHeight = (canvas.height / 2) - (newSize[1] / 2);
         flight = jump;
         score = 0;
+        piecesPassed = 0;
         messageIndex = 0; // Réinitialiser l'index des messages lors du redémarrage
+        pipes = []; // Réinitialiser les tuyaux
         initPipes();
-        initPieces();
+        pieces = []; // Réinitialiser les pièces
+        initPiece();
         startTime = null;
     } else if (!pieceCollected) {
         flight = jump;
