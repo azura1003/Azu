@@ -132,6 +132,9 @@ const showMessage = (message) => {
     document.addEventListener('click', () => {
         document.body.removeChild(messageDiv);
         pieceCollected = false;
+        gamePlaying = true; // Reprendre le jeu après avoir cliqué sur le message
+        startTime = performance.now(); // Réinitialiser le temps de départ pour reprendre là où on s'était arrêté
+        window.requestAnimationFrame(render); // Relancer la boucle d'animation
     }, { once: true });
 };
 
@@ -139,6 +142,8 @@ const render = (timestamp) => {
     if (!startTime) startTime = timestamp;
     index++;
     const bgX = -((index * (speed / 2)) % bgImg.width);
+
+    // Dessiner l'arrière-plan
     ctx.drawImage(bgImg, bgX, 0, bgImg.width, canvas.height);
     if (bgX + bgImg.width < canvas.width) {
         ctx.drawImage(bgImg, bgX + bgImg.width, 0, bgImg.width, canvas.height);
@@ -196,6 +201,19 @@ const render = (timestamp) => {
         ctx.fillText(`Score: ${score}`, canvas.width / 2 - 50, canvas.height / 2);
         ctx.fillText(`Click to Restart`, canvas.width / 2 - 100, canvas.height / 2 + 50);
         ctx.font = "bold 30px courier";
+    } else if (pieceCollected) {
+        // Dessiner l'étoile et les tuyaux sans mise à jour de la position lorsqu'une pièce est collectée
+        ctx.drawImage(starImg, (canvas.width / 2) - (newSize[0] / 2), flyHeight, newSize[0], newSize[1]);
+        pipes.forEach(pipe => {
+            ctx.drawImage(pipeTopImg, pipe[0], 0, pipeWidth, pipe[1]);
+            ctx.drawImage(pipeBottomImg, pipe[0], pipe[1] + pipeGap, pipeWidth, canvas.height - pipe[1] - pipeGap);
+        });
+        pieces.forEach(piece => {
+            ctx.drawImage(pieceImg, piece[0], piece[1], 30, 30);
+        });
+        ctx.fillStyle = 'white';
+        ctx.fillText(`Score: ${score}`, 10, 50);
+        ctx.font = "bold 30px courier";
     } else {
         ctx.drawImage(starImg, (canvas.width / 2) - (newSize[0] / 2), (canvas.height / 2) - (newSize[1] / 2), newSize[0], newSize[1]);
         flyHeight = (canvas.height / 2) - (newSize[1] / 2);
@@ -205,7 +223,9 @@ const render = (timestamp) => {
         ctx.font = "bold 30px courier";
     }
 
-    window.requestAnimationFrame(render);
+    if (!pieceCollected) {
+        window.requestAnimationFrame(render);
+    }
 };
 
 bgImg.onload = () => window.requestAnimationFrame(render);
@@ -215,7 +235,7 @@ initPipes();
 initPieces();
 
 document.addEventListener('click', () => {
-    if (!gamePlaying && !gameOver) {
+    if (!gamePlaying && !gameOver && !pieceCollected) {
         gamePlaying = true;
         flyHeight = (canvas.height / 2) - (newSize[1] / 2);
         flight = jump;
