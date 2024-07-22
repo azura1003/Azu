@@ -6,16 +6,48 @@ body {
     font-family: 'Press Start 2P', cursive;
     user-select: none;
     color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
 }
 
 header {
-    margin: 0 auto;
+    margin: 0;
     width: 431px;
-
 }
 
 h1 {
     background: url(./azura-bg.png) 0% 340px;
     padding: 1.2rem 0;
     margin: 0;
+}
+
+canvas {
+    width: 431px;
+    height: 768px;
+    display: block;
+}
+
+/* Media queries for mobile and tablet */
+@media (max-width: 768px) {
+    canvas {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+    }
+}
+
+@media (max-width: 480px) {
+    header {
+        width: 100%;
+        padding: 0 1rem;
+    }
+
+    canvas {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+    }
 }

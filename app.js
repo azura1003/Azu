@@ -7,12 +7,11 @@ const pipeBottomImg = new Image();
 const pieceImg = new Image();
 
 bgImg.src = './azura-bg.png';
-starImg.src = './static-star.png'; // Assurez-vous que cette image se trouve dans le bon répertoire
-pipeTopImg.src = './pipe-top.png'; // Assurez-vous que cette image se trouve dans le bon répertoire
-pipeBottomImg.src = './pipe-bottom.png'; // Assurez-vous que cette image se trouve dans le bon répertoire
-pieceImg.src = './piece.png'; // Assurez-vous que cette image se trouve dans le bon répertoire
+starImg.src = './static-star.png';
+pipeTopImg.src = './pipe-top.png';
+pipeBottomImg.src = './pipe-bottom.png';
+pieceImg.src = './piece.png';
 
-// General settings
 let gamePlaying = false;
 let gameOver = false;
 let pieceCollected = false;
@@ -22,26 +21,42 @@ let piecesPassed = 0;
 
 const gravity = 0.5,
     speed = 6.2,
-    size = [51, 36],
-    jump = -11.5,
-    cTenth = canvas.width / 10;
+    jump = -11.5;
 
-const pipeWidth = 78; // Largeur des tuyaux (ou obstacles)
-const pipeGap = 200; // Espace entre les tuyaux supérieur et inférieur
-const minPipeDistance = 200; // Distance minimale entre deux tuyaux
+let pipeWidth, pipeGap, minPipeDistance, newSize, margin, cTenth;
 
-// New size for the star (réduit légèrement la taille)
-const newSize = [size[0] * 1.2, size[1] * 2.0];
-const margin = 60; // Marge pour réduire la sensibilité des collisions
+const resizeGame = () => {
+    if (window.innerWidth <= 768) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        pipeWidth = canvas.width / 5;
+        pipeGap = canvas.height / 4;
+        minPipeDistance = canvas.width / 3;
+        newSize = [canvas.width / 10, canvas.height / 15];
+        margin = canvas.width / 50;
+        cTenth = canvas.width / 10;
+    } else {
+        canvas.width = 431;
+        canvas.height = 768;
+
+        pipeWidth = 78;
+        pipeGap = 200;
+        minPipeDistance = 200;
+        newSize = [51 * 1.2, 36 * 2.0];
+        margin = 60;
+        cTenth = canvas.width / 10;
+    }
+    flyHeight = (canvas.height / 2) - (newSize[1] / 2);
+};
 
 let index = 0,
-    meilleurScore = localStorage.getItem('meilleurScore') || 0, // Lire le meilleur score depuis le localStorage
+    meilleurScore = localStorage.getItem('meilleurScore') || 0,
     flight,
-    flyHeight = (canvas.height / 2) - (newSize[1] / 2),
-    score = 0, // Score actuel
+    score = 0,
     pipes = [],
     pieces = [],
-    startTime = null; // Temps de départ pour le délai
+    startTime = null;
 
 const messages = [
     "Azura<br> c'est 3 ans de dev!",
@@ -51,41 +66,38 @@ const messages = [
     "Attention<br> les obstacles arrivent"
 ];
 
-let messageIndex = 0; // Index des messages
+let messageIndex = 0;
 
-// Fonction pour initialiser les tuyaux avec un délai
 const initPipes = () => {
     pipes = Array(3).fill().map((_, i) => [
-        canvas.width + i * (pipeWidth + minPipeDistance) + 1000, // Ajoutez un délai de 1000 pixels
-        Math.random() * (canvas.height / 2),
+        canvas.width + i * (pipeWidth + minPipeDistance) + 1000,
+        Math.random() * (canvas.height / 2) + pipeGap / 2,
         false
     ]);
 };
 
-// Fonction pour initialiser une nouvelle pièce
 const initPiece = () => {
-    if (piecesPassed < 5) {
+    if (pieces.length < 5 && piecesPassed < 5) {
         pieces.push([
-            canvas.width + 500, // Positionner chaque nouvelle pièce après la précédente
-            canvas.height / 2 - 15 // Centrer la pièce verticalement
+            canvas.width + 500 + pieces.length * 200,
+            Math.random() * (canvas.height - 30)
         ]);
     }
 };
 
-// Fonction pour vérifier les collisions avec les tuyaux
 const checkCollision = (pipe) => {
     const pipeTop = {
         x: pipe[0],
         y: 0,
         width: pipeWidth,
-        height: pipe[1]
+        height: pipe[1] - pipeGap / 2
     };
 
     const pipeBottom = {
         x: pipe[0],
-        y: pipe[1] + pipeGap,
+        y: pipe[1] + pipeGap / 2,
         width: pipeWidth,
-        height: canvas.height - pipe[1] - pipeGap
+        height: canvas.height - pipe[1] - pipeGap / 2
     };
 
     const star = {
@@ -95,7 +107,6 @@ const checkCollision = (pipe) => {
         height: newSize[1] - 2 * margin
     };
 
-    // Check collision with top pipe
     if (star.x < pipeTop.x + pipeTop.width &&
         star.x + star.width > pipeTop.x &&
         star.y < pipeTop.height &&
@@ -103,7 +114,6 @@ const checkCollision = (pipe) => {
         return true;
     }
 
-    // Check collision with bottom pipe
     if (star.x < pipeBottom.x + pipeBottom.width &&
         star.x + star.width > pipeBottom.x &&
         star.y < pipeBottom.y + pipeBottom.height &&
@@ -114,7 +124,6 @@ const checkCollision = (pipe) => {
     return false;
 };
 
-// Fonction pour vérifier les collisions avec les pièces
 const checkPieceCollision = (piece) => {
     const star = {
         x: (canvas.width / 2) - (newSize[0] / 2),
@@ -127,11 +136,10 @@ const checkPieceCollision = (piece) => {
            star.y < piece[1] + 30 && star.y + star.height > piece[1];
 };
 
-// Fonction pour afficher un message en pop-up et mettre le jeu en pause
 const showMessage = (message, callback) => {
     pieceCollected = true;
     pause = true;
-    pauseStartTime = performance.now(); // Enregistrer le temps de début de la pause
+    pauseStartTime = performance.now();
     const messageDiv = document.createElement('div');
     messageDiv.style.position = 'fixed';
     messageDiv.style.top = '50%';
@@ -142,22 +150,21 @@ const showMessage = (message, callback) => {
     messageDiv.style.color = 'white';
     messageDiv.style.fontSize = '20px';
     messageDiv.style.zIndex = '1000';
-    messageDiv.innerHTML = message; // Utiliser innerHTML pour permettre les sauts de ligne
+    messageDiv.innerHTML = message;
     document.body.appendChild(messageDiv);
     document.addEventListener('click', () => {
         document.body.removeChild(messageDiv);
         pieceCollected = false;
         pause = false;
-        if (callback) callback(); // Exécuter la fonction de rappel si elle est fournie
-        window.requestAnimationFrame(render); // Relancer la boucle d'animation
+        if (callback) callback();
+        window.requestAnimationFrame(render);
     }, { once: true });
 };
 
-// Fonction pour afficher le message de bienvenue
 const showWelcomeMessage = () => {
     showMessage('Hey collectez<br>les pieces.', () => {
         gamePlaying = true;
-        startTime = performance.now(); // Démarrer le temps après le message de bienvenue
+        startTime = performance.now();
     });
 };
 
@@ -170,37 +177,34 @@ const render = (timestamp) => {
     index++;
     const bgX = -((index * (speed / 2)) % bgImg.width);
 
-    // Dessiner l'arrière-plan
     ctx.drawImage(bgImg, bgX, 0, bgImg.width, canvas.height);
     if (bgX + bgImg.width < canvas.width) {
         ctx.drawImage(bgImg, bgX + bgImg.width, 0, bgImg.width, canvas.height);
     }
 
     if (gamePlaying && !gameOver && !pieceCollected && timestamp - startTime > 300) {
-        if (piecesPassed >= 5) {
-            pipes.forEach(pipe => {
-                pipe[0] -= speed;
-                ctx.drawImage(pipeTopImg, pipe[0], 0, pipeWidth, pipe[1]);
-                ctx.drawImage(pipeBottomImg, pipe[0], pipe[1] + pipeGap, pipeWidth, canvas.height - pipe[1] - pipeGap);
-                if (pipe[0] + pipeWidth < canvas.width / 2 && !pipe[2]) {
-                    score++;
-                    pipe[2] = true;
+        pipes.forEach(pipe => {
+            pipe[0] -= speed;
+            ctx.drawImage(pipeTopImg, pipe[0], 0, pipeWidth, pipe[1] - pipeGap / 2);
+            ctx.drawImage(pipeBottomImg, pipe[0], pipe[1] + pipeGap / 2, pipeWidth, canvas.height - pipe[1] - pipeGap / 2);
+            if (pipe[0] + pipeWidth < canvas.width / 2 && !pipe[2]) {
+                score++;
+                pipe[2] = true;
+            }
+            if (checkCollision(pipe)) {
+                gameOver = true;
+                gamePlaying = false;
+                if (score > meilleurScore) {
+                    meilleurScore = score;
+                    localStorage.setItem('meilleurScore', meilleurScore);
                 }
-                if (checkCollision(pipe)) {
-                    gameOver = true;
-                    gamePlaying = false;
-                    if (score > meilleurScore) {
-                        meilleurScore = score;
-                        localStorage.setItem('meilleurScore', meilleurScore);
-                    }
-                }
-                if (pipe[0] <= -pipeWidth) {
-                    pipe[0] = canvas.width + (pipeWidth + minPipeDistance) * (pipes.length - 1);
-                    pipe[1] = Math.random() * (canvas.height / 2);
-                    pipe[2] = false;
-                }
-            });
-        }
+            }
+            if (pipe[0] <= -pipeWidth) {
+                pipe[0] = canvas.width + (pipeWidth + minPipeDistance) * (pipes.length - 1);
+                pipe[1] = Math.random() * (canvas.height / 2) + pipeGap / 2;
+                pipe[2] = false;
+            }
+        });
 
         pieces.forEach((piece, index) => {
             piece[0] -= speed;
@@ -212,12 +216,12 @@ const render = (timestamp) => {
                     showMessage(messages[messageIndex]);
                     messageIndex++;
                 }
-                initPiece(); // Ajouter une nouvelle pièce
+                initPiece();
             }
             if (piece[0] <= -30) {
                 pieces.splice(index, 1);
                 piecesPassed++;
-                initPiece(); // Ajouter une nouvelle pièce même si elle a été manquée
+                initPiece();
             }
         });
     }
@@ -236,11 +240,10 @@ const render = (timestamp) => {
         ctx.fillText(`Click to Restart`, canvas.width / 2 - 100, canvas.height / 2 + 50);
         ctx.font = "bold 30px courier";
     } else if (pieceCollected) {
-        // Dessiner l'étoile et les tuyaux sans mise à jour de la position lorsqu'une pièce est collectée
         ctx.drawImage(starImg, (canvas.width / 2) - (newSize[0] / 2), flyHeight, newSize[0], newSize[1]);
         pipes.forEach(pipe => {
-            ctx.drawImage(pipeTopImg, pipe[0], 0, pipeWidth, pipe[1]);
-            ctx.drawImage(pipeBottomImg, pipe[0], pipe[1] + pipeGap, pipeWidth, canvas.height - pipe[1] - pipeGap);
+            ctx.drawImage(pipeTopImg, pipe[0], 0, pipeWidth, pipe[1] - pipeGap / 2);
+            ctx.drawImage(pipeBottomImg, pipe[0], pipe[1] + pipeGap / 2, pipeWidth, canvas.height - pipe[1] - pipeGap / 2);
         });
         pieces.forEach(piece => {
             ctx.drawImage(pieceImg, piece[0], piece[1], 30, 30);
@@ -262,9 +265,13 @@ const render = (timestamp) => {
     }
 };
 
-bgImg.onload = () => window.requestAnimationFrame(render);
+bgImg.onload = () => {
+    resizeGame();
+    window.requestAnimationFrame(render);
+};
 
-// Initialiser les pièces et les tuyaux
+window.addEventListener('resize', resizeGame);
+
 initPiece();
 initPipes();
 
@@ -278,10 +285,10 @@ document.addEventListener('click', () => {
         flight = jump;
         score = 0;
         piecesPassed = 0;
-        messageIndex = 0; // Réinitialiser l'index des messages lors du redémarrage
-        pipes = []; // Réinitialiser les tuyaux
+        messageIndex = 0;
+        pipes = [];
         initPipes();
-        pieces = []; // Réinitialiser les pièces
+        pieces = [];
         initPiece();
         startTime = null;
     } else if (!pieceCollected) {
