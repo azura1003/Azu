@@ -2,15 +2,13 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const bgImg = new Image();
 const starImg = new Image();
-const pipeTopImg = new Image();
-const pipeBottomImg = new Image();
 const pieceImg = new Image();
+const missileImg = new Image(); // New missile image
 
 bgImg.src = './azura-bg.png';
 starImg.src = './static-star.png';
-pipeTopImg.src = './pipe-top.png';
-pipeBottomImg.src = './pipe-bottom.png';
 pieceImg.src = './piece.png';
+missileImg.src = './poussieres.png'; // Load missile image
 
 let gamePlaying = false;
 let gameOver = false;
@@ -18,118 +16,59 @@ let pieceCollected = false;
 let pause = false;
 let pauseStartTime;
 let piecesPassed = 0;
+let piecesCollected = 0;
 
 const gravity = 0.5,
-    speed = 6.2,
-    jump = -11.5;
+    speed = 6.2;
 
-let pipeWidth, pipeGap, minPipeDistance, newSize, margin, cTenth;
+let initialSize, maxSize, starWidth, starHeight;
+let starX, starY;
+let missiles = []; // Array to store missiles
+let lastMissileTime = 0; // To control missile firing rate
 
 const resizeGame = () => {
     if (window.innerWidth <= 768) {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        pipeWidth = canvas.width / 5;
-        pipeGap = canvas.height / 4;
-        minPipeDistance = canvas.width / 3;
-        newSize = [canvas.width / 10, canvas.height / 15];
-        margin = canvas.width / 50;
-        cTenth = canvas.width / 10;
+        initialSize = [canvas.width / 25, canvas.height / 37.5]; // Start size at 2x
+        maxSize = [canvas.width / 10, canvas.height / 15];
     } else {
         canvas.width = 431;
         canvas.height = 768;
 
-        pipeWidth = 78;
-        pipeGap = 200;
-        minPipeDistance = 200;
-        newSize = [51 * 1.2, 36 * 2.0];
-        margin = 60;
-        cTenth = canvas.width / 10;
+        initialSize = [51 * 0.4, 36 * 0.4]; // Start size at 2x
+        maxSize = [51 * 1.2, 36 * 2.0]; // Maximum size
     }
-    flyHeight = (canvas.height / 2) - (newSize[1] / 2);
+    starWidth = initialSize[0];
+    starHeight = initialSize[1];
+    starX = (canvas.width / 2) - (starWidth / 2);
+    starY = (canvas.height / 2) - (starHeight / 2);
 };
 
 let index = 0,
     meilleurScore = localStorage.getItem('meilleurScore') || 0,
-    flight,
     score = 0,
-    pipes = [],
     pieces = [],
     startTime = null;
 
-const messages = [
-    "Azura<br> c'est 3 ans de dev!",
-    "1500+ inscriptions<br> organiques",
-    "un réseau social<br> inspiré des jeux",
-    "Unique en son genre",
-    "Attention<br> les obstacles arrivent"
-];
+const messages = [];
 
 let messageIndex = 0;
 
-const initPipes = () => {
-    pipes = Array(3).fill().map((_, i) => [
-        canvas.width + i * (pipeWidth + minPipeDistance) + 1000,
-        Math.random() * (canvas.height / 2) + pipeGap / 2,
-        false
-    ]);
-};
-
 const initPiece = () => {
-    if (pieces.length < 5 && piecesPassed < 5) {
-        pieces.push([
-            canvas.width + 500 + pieces.length * 200,
-            Math.random() * (canvas.height - 30)
-        ]);
-    }
-};
-
-const checkCollision = (pipe) => {
-    const pipeTop = {
-        x: pipe[0],
-        y: 0,
-        width: pipeWidth,
-        height: pipe[1] - pipeGap / 2
-    };
-
-    const pipeBottom = {
-        x: pipe[0],
-        y: pipe[1] + pipeGap / 2,
-        width: pipeWidth,
-        height: canvas.height - pipe[1] - pipeGap / 2
-    };
-
-    const star = {
-        x: (canvas.width / 2) - (newSize[0] / 2) + margin,
-        y: flyHeight + margin,
-        width: newSize[0] - 2 * margin,
-        height: newSize[1] - 2 * margin
-    };
-
-    if (star.x < pipeTop.x + pipeTop.width &&
-        star.x + star.width > pipeTop.x &&
-        star.y < pipeTop.height &&
-        star.y + star.height > pipeTop.y) {
-        return true;
-    }
-
-    if (star.x < pipeBottom.x + pipeBottom.width &&
-        star.x + star.width > pipeBottom.x &&
-        star.y < pipeBottom.y + pipeBottom.height &&
-        star.y + star.height > pipeBottom.y) {
-        return true;
-    }
-
-    return false;
+    pieces.push([
+        canvas.width + 500 + pieces.length * 200,
+        Math.random() * (canvas.height - 30)
+    ]);
 };
 
 const checkPieceCollision = (piece) => {
     const star = {
-        x: (canvas.width / 2) - (newSize[0] / 2),
-        y: flyHeight,
-        width: newSize[0],
-        height: newSize[1]
+        x: starX,
+        y: starY,
+        width: starWidth,
+        height: starHeight
     };
 
     return star.x < piece[0] + 30 && star.x + star.width > piece[0] &&
@@ -162,9 +101,44 @@ const showMessage = (message, callback) => {
 };
 
 const showWelcomeMessage = () => {
-    showMessage('Hey collectez<br>les pieces.', () => {
+    showMessage('Bienvenue<br>l/etoile<br> représente le projet<br> azura vivez<br> notre aventure', () => {
         gamePlaying = true;
         startTime = performance.now();
+    });
+};
+
+const updateStarPosition = (x, y) => {
+    starX = x - starWidth / 2;
+    starY = y - starHeight / 2;
+};
+
+const growStar = () => {
+    piecesCollected++;
+    if (piecesCollected <= 5) {
+        const growthFactor = piecesCollected / 5;
+        starWidth = initialSize[0] + growthFactor * (maxSize[0] - initialSize[0]);
+        starHeight = initialSize[1] + growthFactor * (maxSize[1] - initialSize[1]);
+    } else {
+        starWidth = maxSize[0];
+        starHeight = maxSize[1];
+    }
+};
+
+const fireMissile = () => {
+    const missileX = starX + starWidth;
+    const missileY = starY + starHeight / 2 - 10; // Adjust missile starting position
+    missiles.push({ x: missileX, y: missileY });
+};
+
+const updateMissiles = () => {
+    missiles.forEach((missile, index) => {
+        missile.x += 4; // Slower missile speed
+        ctx.drawImage(missileImg, missile.x, missile.y, 20, 20); // Larger missile size
+
+        // Remove missile if it goes out of bounds
+        if (missile.x > canvas.width) {
+            missiles.splice(index, 1);
+        }
     });
 };
 
@@ -183,53 +157,49 @@ const render = (timestamp) => {
     }
 
     if (gamePlaying && !gameOver && !pieceCollected && timestamp - startTime > 300) {
-        pipes.forEach(pipe => {
-            pipe[0] -= speed;
-            ctx.drawImage(pipeTopImg, pipe[0], 0, pipeWidth, pipe[1] - pipeGap / 2);
-            ctx.drawImage(pipeBottomImg, pipe[0], pipe[1] + pipeGap / 2, pipeWidth, canvas.height - pipe[1] - pipeGap / 2);
-            if (pipe[0] + pipeWidth < canvas.width / 2 && !pipe[2]) {
-                score++;
-                pipe[2] = true;
-            }
-            if (checkCollision(pipe)) {
-                gameOver = true;
-                gamePlaying = false;
-                if (score > meilleurScore) {
-                    meilleurScore = score;
-                    localStorage.setItem('meilleurScore', meilleurScore);
-                }
-            }
-            if (pipe[0] <= -pipeWidth) {
-                pipe[0] = canvas.width + (pipeWidth + minPipeDistance) * (pipes.length - 1);
-                pipe[1] = Math.random() * (canvas.height / 2) + pipeGap / 2;
-                pipe[2] = false;
-            }
-        });
-
         pieces.forEach((piece, index) => {
             piece[0] -= speed;
             ctx.drawImage(pieceImg, piece[0], piece[1], 30, 30);
             if (checkPieceCollision(piece)) {
                 pieces.splice(index, 1);
                 piecesPassed++;
-                if (messageIndex < messages.length) {
+                growStar();
+
+                // Show message for the first and last piece
+                if (piecesCollected === 1) {
+                    showMessage("Hey, Collectez<br> les pieces pour<br> faire grossir <br> l'étoile", initPiece);
+                } else if (piecesCollected === 5) {
+                    showMessage("Bravo! ce que<br> vous avez collecté<br> represente notre<br> fiancement initial<br> par fonds propres", null);
+                } else if (piecesCollected < 5) {
+                    initPiece(); // Continue to add pieces until the star is fully grown
+                }
+
+                if (piecesCollected < 5 && messageIndex < messages.length) {
                     showMessage(messages[messageIndex]);
                     messageIndex++;
                 }
-                initPiece();
             }
             if (piece[0] <= -30) {
                 pieces.splice(index, 1);
                 piecesPassed++;
-                initPiece();
+                if (piecesCollected < 5) {
+                    initPiece(); // Continue to add pieces until the star is fully grown
+                }
             }
         });
+
+        // Fire missiles at regular intervals
+        if (piecesCollected >= 5 && timestamp - lastMissileTime > 1000) { // Fire a missile every 1000ms
+            fireMissile();
+            lastMissileTime = timestamp;
+        }
+
+        // Update and draw missiles
+        updateMissiles();
     }
 
     if (gamePlaying && !gameOver) {
-        ctx.drawImage(starImg, (canvas.width / 2) - (newSize[0] / 2), flyHeight, newSize[0], newSize[1]);
-        flight += gravity;
-        flyHeight = Math.min(flyHeight + flight, canvas.height - newSize[1]);
+        ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
         ctx.fillStyle = 'white';
         ctx.fillText(`Score: ${score}`, 10, 50);
         ctx.font = "bold 30px courier";
@@ -240,11 +210,7 @@ const render = (timestamp) => {
         ctx.fillText(`Click to Restart`, canvas.width / 2 - 100, canvas.height / 2 + 50);
         ctx.font = "bold 30px courier";
     } else if (pieceCollected) {
-        ctx.drawImage(starImg, (canvas.width / 2) - (newSize[0] / 2), flyHeight, newSize[0], newSize[1]);
-        pipes.forEach(pipe => {
-            ctx.drawImage(pipeTopImg, pipe[0], 0, pipeWidth, pipe[1] - pipeGap / 2);
-            ctx.drawImage(pipeBottomImg, pipe[0], pipe[1] + pipeGap / 2, pipeWidth, canvas.height - pipe[1] - pipeGap / 2);
-        });
+        ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
         pieces.forEach(piece => {
             ctx.drawImage(pieceImg, piece[0], piece[1], 30, 30);
         });
@@ -252,8 +218,7 @@ const render = (timestamp) => {
         ctx.fillText(`Score: ${score}`, 10, 50);
         ctx.font = "bold 30px courier";
     } else {
-        ctx.drawImage(starImg, (canvas.width / 2) - (newSize[0] / 2), (canvas.height / 2) - (newSize[1] / 2), newSize[0], newSize[1]);
-        flyHeight = (canvas.height / 2) - (newSize[1] / 2);
+        ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
         ctx.fillStyle = 'white';
         ctx.fillText(`meilleur score: ${meilleurScore}`, 85, 245);
         ctx.fillText('cliquez pour jouer', 90, 535);
@@ -273,7 +238,19 @@ bgImg.onload = () => {
 window.addEventListener('resize', resizeGame);
 
 initPiece();
-initPipes();
+
+canvas.addEventListener('mousemove', (e) => {
+    if (gamePlaying && !gameOver) {
+        updateStarPosition(e.clientX - canvas.getBoundingClientRect().left, e.clientY - canvas.getBoundingClientRect().top);
+    }
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    if (gamePlaying && !gameOver) {
+        const touch = e.touches[0];
+        updateStarPosition(touch.clientX - canvas.getBoundingClientRect().left, touch.clientY - canvas.getBoundingClientRect().top);
+    }
+});
 
 document.addEventListener('click', () => {
     if (!gamePlaying && !gameOver && !pieceCollected) {
@@ -281,23 +258,17 @@ document.addEventListener('click', () => {
     } else if (gameOver) {
         gamePlaying = true;
         gameOver = false;
-        flyHeight = (canvas.height / 2) - (newSize[1] / 2);
-        flight = jump;
+        starWidth = initialSize[0];
+        starHeight = initialSize[1];
+        starX = (canvas.width / 2) - (starWidth / 2);
+        starY = (canvas.height / 2) - (starHeight / 2);
         score = 0;
         piecesPassed = 0;
+        piecesCollected = 0;
         messageIndex = 0;
-        pipes = [];
-        initPipes();
         pieces = [];
         initPiece();
         startTime = null;
-    } else if (!pieceCollected) {
-        flight = jump;
+        missiles = []; // Reset missiles
     }
 });
-
-window.onclick = () => {
-    if (gamePlaying && !gameOver && !pieceCollected) {
-        flight = jump;
-    }
-};
