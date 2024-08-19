@@ -130,7 +130,7 @@ const showMessage = (message, callback) => {
 };
 
 const showWelcomeMessage = () => {
-    showMessage('Bienvenue<br>l\'étoile<br> représente le projet<br> azura vivez<br> notre aventure', () => {
+    showMessage('Bienvenue<br>l/etoile<br> représente le projet<br> azura vivez<br> notre aventure', () => {
         gamePlaying = true;
         startTime = performance.now();
     });
@@ -348,6 +348,9 @@ const render = (timestamp) => {
                 } else if (piecesCollected < 5) {
                     initPiece();
                 }
+            } else if (piece[0] <= -30) {
+                pieces.splice(index, 1);
+                initPiece(); // Continuer à ajouter des pièces même si elles sont manquées
             }
         });
 
@@ -363,7 +366,10 @@ const render = (timestamp) => {
 
         if (equipment && checkEquipmentCollision()) {
             equipment = null;
-            showMessage("Bravo vous avez battu la démotivation, vous avez obtenu des ailes qui vont vous aider à durant l'étape 2 du projet");
+            showMessage("Bravo vous avez battu la démotivation, vous avez obtenu des ailes qui vont vous aider durant l'étape 2 du projet", () => {
+                localStorage.setItem('level2Unlocked', 'true'); // Débloque le niveau 2
+                window.location.href = 'index.html'; // Retour au menu principal
+            });
         }
     }
 
