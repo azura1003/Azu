@@ -5,14 +5,14 @@ const starImg = new Image();
 const missileImg = new Image();
 const monsterImg = new Image();
 const fakeBossImg = new Image();
-const rainImg = new Image(); // Correctly define the rain image
+const rainImg = new Image(); 
 
 bgImg.src = './img/level2-bg.png';
 starImg.src = './img/static-star-level2.png';
 missileImg.src = './img/poussieres.png';
 monsterImg.src = './img/cyber.png';
 fakeBossImg.src = './img/fake.png';
-rainImg.src = './img/rain1.png'; // Load the rain image
+rainImg.src = './img/rain1.png';
 
 let gamePlaying = false;
 let gameOver = false;
@@ -31,8 +31,13 @@ let flashStartTime = null;
 let rainDrops = [];
 let lastFlashTime = 0;
 let nextFlashTime = 0;
+let damageText = [];
+let damageInterval;
+let puzzleShown = false;
+let score = localStorage.getItem('score') ? parseInt(localStorage.getItem('score')) : 0;
 
-const speed = 6.2;
+const speed = 2.0; // Vitesse réduite
+let health = 100;
 
 const resizeGame = () => {
     if (window.innerWidth <= 768) {
@@ -51,7 +56,7 @@ const resizeGame = () => {
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
             length: Math.random() * 15 + 10,
-            speed: Math.random() * 4 + 2
+            speed: Math.random() * 2 + 1 // Vitesse de la pluie ajustée
         });
     }
 };
@@ -73,7 +78,7 @@ const fireMissile = () => {
 
 const updateMissiles = () => {
     missiles.forEach((missile, index) => {
-        missile.x += 6;
+        missile.x += 3; // Vitesse du missile réduite
         missile.y += (missile.direction || 0) * 2;
         ctx.drawImage(missileImg, missile.x, missile.y, 20, 20);
 
@@ -100,12 +105,12 @@ const initMonsterWave = () => {
             };
             monsters.push(monster);
         }
-    }, 150);
+    }, 300); // Rythme d'apparition des monstres réduit
 };
 
 const updateMonsters = () => {
     monsters.forEach((monster, index) => {
-        monster.x -= 6;
+        monster.x -= 2; // Vitesse des monstres réduite
 
         ctx.drawImage(monsterImg, monster.x, monster.y, monster.width, monster.height);
 
@@ -127,7 +132,12 @@ const updateMonsters = () => {
             monster.y < starY + starHeight &&
             monster.y + monster.height > starY
         ) {
-            gameOver = true;
+            health -= 10;
+            score -= 10;
+            showDamageText();
+            if (health <= 0) {
+                gameOver = true;
+            }
         }
 
         if (monster.x + monster.width < 0) {
@@ -143,16 +153,84 @@ const spawnFakeBoss = () => {
         width: starWidth,
         height: starHeight
     };
+    startDamageInterval();
 };
 
 const updateFakeBoss = () => {
     if (fakeBoss) {
-        // Imitate the star's movement
-        fakeBoss.x += (starX - fakeBoss.x) * 0.1;
-        fakeBoss.y += (starY - fakeBoss.y) * 0.1;
-
+        fakeBoss.x += (starX - fakeBoss.x) * 0.05;
+        fakeBoss.y += (starY - fakeBoss.y) * 0.05;
         ctx.drawImage(fakeBossImg, fakeBoss.x, fakeBoss.y, fakeBoss.width, fakeBoss.height);
     }
+};
+
+const startDamageInterval = () => {
+    damageInterval = setInterval(() => {
+        showDamageText();
+        health -= 10;
+        score -= 10;
+        if (health <= 0) {
+            clearInterval(damageInterval);
+            gameOver = true;
+        }
+    }, 1000);
+    setTimeout(showPuzzle, 20000); // Afficher le puzzle après 20 secondes
+};
+
+const stopDamageInterval = () => {
+    clearInterval(damageInterval);
+};
+
+const showDamageText = () => {
+    damageText.push({ x: starX + starWidth / 2, y: starY, opacity: 1.0 });
+};
+
+const updateDamageText = () => {
+    damageText.forEach((text, index) => {
+        ctx.fillStyle = `rgba(255, 0, 0, ${text.opacity})`;
+        ctx.font = "bold 20px Arial";
+        ctx.fillText("-10 HP", text.x, text.y);
+        text.y -= 1;
+        text.opacity -= 0.02;
+        if (text.opacity <= 0) {
+            damageText.splice(index, 1);
+        }
+    });
+};
+
+const showPuzzle = () => {
+    stopDamageInterval(); // Arrête les dégâts continus
+
+    const puzzleDiv = document.createElement('div');
+    puzzleDiv.style.position = 'fixed';
+    puzzleDiv.style.top = '50%';
+    puzzleDiv.style.left = '50%';
+    puzzleDiv.style.transform = 'translate(-50%, -50%)';
+    puzzleDiv.style.padding = '20px';
+    puzzleDiv.style.backgroundColor = 'black';
+    puzzleDiv.style.color = 'white';
+    puzzleDiv.style.fontSize = '20px';
+    puzzleDiv.style.zIndex = '1000';
+    puzzleDiv.innerHTML = `
+        <p>Pour que Azufake vous lâche, il faut répondre à cette question que seul un gamer pourra répondre :</p>
+        <p>De quelle couleur est le Pokémon de type électrique de Sacha ?</p>
+        <button id="redButton">Rouge</button>
+        <button id="yellowButton">Jaune</button>
+    `;
+
+    document.body.appendChild(puzzleDiv);
+
+    document.getElementById('redButton').addEventListener('click', () => {
+        puzzleDiv.remove();
+        gameOver = true;
+        showMessage("Mauvaise réponse! C'était Jaune! Game Over.");
+    });
+
+    document.getElementById('yellowButton').addEventListener('click', () => {
+        puzzleDiv.remove();
+        fakeBoss = null; // Azufake disparaît
+        showMessage("Bonne réponse! Azufake a disparu!");
+    });
 };
 
 const startFlashingEffect = () => {
@@ -227,11 +305,12 @@ const render = (timestamp) => {
 
     renderRain();
     renderFlashingEffect();
+    updateDamageText();
 
     if (gamePlaying && !gameOver) {
         ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
 
-        if (timestamp - lastMissileTime > 500) {
+        if (timestamp - lastMissileTime > 800) {
             fireMissile();
             lastMissileTime = timestamp;
         }
@@ -242,10 +321,12 @@ const render = (timestamp) => {
 
         ctx.fillStyle = 'white';
         ctx.fillText(`Level 2`, 10, 50);
+        ctx.fillText(`Score: ${score}`, 10, 90);
         ctx.font = "bold 30px courier";
     } else if (gameOver) {
         ctx.fillStyle = 'white';
         ctx.fillText(`Game Over`, canvas.width / 2 - 70, canvas.height / 2 - 50);
+        ctx.fillText(`Score: ${score}`, canvas.width / 2 - 50, canvas.height / 2);
         ctx.fillText(`Click to Restart`, canvas.width / 2 - 100, canvas.height / 2 + 50);
         ctx.font = "bold 30px courier";
     } else {
@@ -273,6 +354,12 @@ bgImg.onload = () => {
             initMonsterWave();
         });
     }, 5000);
+
+    setTimeout(() => {
+        showMessage("Mais...Mais c'est quoi ça ? On dirait une pâle copie de notre projet!", () => {
+            setTimeout(showPuzzle, 16000);
+        });
+    }, 16000);
 };
 
 window.addEventListener('resize', resizeGame);
@@ -304,6 +391,8 @@ document.addEventListener('click', () => {
         starX = (canvas.width / 2) - (starWidth / 2);
         starY = (canvas.height / 2) - (starHeight / 2);
         monsters = [];
+        fakeBoss = null;
+        score = 0;
     }
 });
 

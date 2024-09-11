@@ -33,8 +33,8 @@ let lastMissileTime = 0;
 let lastBossMissileTime = 0;
 let haters = [];
 
-const gravity = 0.5,
-    speed = 6.2;
+const gravity = 0.5;
+const speed = 2.0; // Ajustement de la vitesse globale pour correspondre au niveau 2
 
 let initialSize, maxSize, starWidth, starHeight;
 let starX, starY;
@@ -61,7 +61,7 @@ const resizeGame = () => {
 
 let index = 0,
     meilleurScore = localStorage.getItem('meilleurScore') || 0,
-    score = 0,
+    score = parseInt(localStorage.getItem('score')) || 0,
     pieces = [],
     startTime = null;
 
@@ -161,7 +161,7 @@ const fireMissile = () => {
 
 const updateMissiles = () => {
     missiles.forEach((missile, index) => {
-        missile.x += 4;
+        missile.x += 3; 
         ctx.drawImage(missileImg, missile.x, missile.y, 20, 20);
 
         if (missile.x > canvas.width) {
@@ -183,7 +183,7 @@ const initHater = () => {
 
 const updateHaters = () => {
     haters.forEach((hater, index) => {
-        hater.x -= 2;
+        hater.x -= 1.5; 
 
         ctx.fillStyle = "red";
         ctx.fillRect(hater.x, hater.y - 10, hater.width, 5);
@@ -230,8 +230,9 @@ const initBoss = () => {
         width: 120,
         height: 120,
         health: 15,
-        directionY: 2
+        directionY: 1.5 
     };
+    saveGame(); // Sauvegarder le jeu avant le combat contre le boss
 };
 
 const fireBossMissile = () => {
@@ -240,8 +241,7 @@ const fireBossMissile = () => {
         const missileY = boss.y + boss.height / 2 - 10;
         bossMissiles.push({ x: missileX, y: missileY, direction: 0 });
 
-        // Random chance to fire in five directions
-        if (Math.random() < 0.3) { // 30% chance
+        if (Math.random() < 0.3) {
             const directions = [-1, -0.5, 0, 0.5, 1];
             directions.forEach(direction => {
                 bossMissiles.push({ x: missileX, y: missileY, direction });
@@ -252,8 +252,9 @@ const fireBossMissile = () => {
 
 const updateBossMissiles = () => {
     bossMissiles.forEach((missile, index) => {
-        missile.x -= 4;
-        missile.y += missile.direction * 2; // Move in different directions
+        missile.x -= 3;
+        missile.y += missile.direction * 1.5; 
+
         ctx.drawImage(bossMissileImg, missile.x, missile.y, 20, 20);
 
         if (missile.x + 20 < 0 || missile.y < 0 || missile.y > canvas.height) {
@@ -350,7 +351,7 @@ const render = (timestamp) => {
                 }
             } else if (piece[0] <= -30) {
                 pieces.splice(index, 1);
-                initPiece(); // Continuer à ajouter des pièces même si elles sont manquées
+                initPiece();
             }
         });
 
@@ -367,8 +368,9 @@ const render = (timestamp) => {
         if (equipment && checkEquipmentCollision()) {
             equipment = null;
             showMessage("Bravo vous avez battu la démotivation, vous avez obtenu des ailes qui vont vous aider durant l'étape 2 du projet", () => {
-                localStorage.setItem('level2Unlocked', 'true'); // Débloque le niveau 2
-                window.location.href = 'index.html'; // Retour au menu principal
+                localStorage.setItem('level2Unlocked', 'true');
+                localStorage.removeItem('saveGame'); // Supprimer la sauvegarde après victoire
+                window.location.href = 'level2.html'; // Passer directement au niveau 2
             });
         }
     }
@@ -411,6 +413,7 @@ const render = (timestamp) => {
 
 bgImg.onload = () => {
     resizeGame();
+    loadGame(); // Charger le jeu si une sauvegarde existe
     window.requestAnimationFrame(render);
 };
 
@@ -453,6 +456,7 @@ document.addEventListener('click', () => {
         initPiece();
         startTime = null;
         missiles = [];
+        loadGame(); // Charger le jeu si une sauvegarde existe
     }
 });
 
@@ -462,3 +466,47 @@ setInterval(() => {
         lastBossMissileTime = Date.now();
     }
 }, 1000);
+
+// Système de sauvegarde
+const saveGame = () => {
+    const saveState = {
+        piecesCollected,
+        piecesPassed,
+        starWidth,
+        starHeight,
+        starX,
+        starY,
+        score,
+        bossHealth: boss ? boss.health : null,
+    };
+    localStorage.setItem('saveGame', JSON.stringify(saveState));
+};
+
+const loadGame = () => {
+    const savedState = JSON.parse(localStorage.getItem('saveGame'));
+    if (savedState) {
+        piecesCollected = savedState.piecesCollected;
+        piecesPassed = savedState.piecesPassed;
+        starWidth = savedState.starWidth;
+        starHeight = savedState.starHeight;
+        starX = savedState.starX;
+        starY = savedState.starY;
+        score = savedState.score;
+        if (savedState.bossHealth !== null) {
+            initBoss();
+            boss.health = savedState.bossHealth;
+        }
+    }
+};
+
+// Bouton pour réinitialiser le jeu
+const resetButton = document.createElement('button');
+resetButton.innerText = "Reset Jeu";
+resetButton.style.position = 'fixed';
+resetButton.style.bottom = '10px';
+resetButton.style.right = '10px';
+resetButton.addEventListener('click', () => {
+    localStorage.clear();
+    window.location.reload();
+});
+document.body.appendChild(resetButton);
