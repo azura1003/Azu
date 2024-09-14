@@ -23,6 +23,7 @@ let businessY = canvas.height / 2;
 let score = localStorage.getItem('score') ? parseInt(localStorage.getItem('score')) : 0;
 let messageText = ''; // Texte du message in-game
 let messageTimer; // Timer pour afficher le message temporairement
+let shakeDuration = 0; // Durée du tremblement
 
 const speed = 2.0;
 
@@ -150,6 +151,22 @@ const showRiddle = (riddle, callback) => {
     });
 };
 
+// Fonction de tremblement de terre
+const startShakeEffect = (duration) => {
+    shakeDuration = duration; // Durée du tremblement
+    const shakeInterval = setInterval(() => {
+        if (shakeDuration > 0) {
+            const offsetX = Math.random() * 10 - 5; // Génère un décalage horizontal aléatoire
+            const offsetY = Math.random() * 10 - 5; // Génère un décalage vertical aléatoire
+            canvas.style.transform = `translate(${offsetX}px, ${offsetY}px)`; // Applique le décalage au canvas
+            shakeDuration -= 50; // Réduit la durée du tremblement
+        } else {
+            clearInterval(shakeInterval);
+            canvas.style.transform = 'translate(0, 0)'; // Réinitialise la position du canvas
+        }
+    }, 50); // Répète toutes les 50ms
+};
+
 // Rendu du jeu
 const render = () => {
     if (pause) return; // Si le jeu est en pause, arrêter le rendu
@@ -163,11 +180,19 @@ const render = () => {
 
     // Affiche le texte du message in-game avec un fond noir, positionné plus bas
     if (messageText) {
+        const lines = messageText.split('\n'); // Divise le texte en lignes
+        const lineHeight = 20; // Hauteur d'une ligne
+        const textHeight = lines.length * lineHeight; // Hauteur totale du texte
+
         ctx.fillStyle = 'black';
-        ctx.fillRect(canvas.width / 2 - 150, 200, 300, 40); // Rectangle noir en arrière-plan du texte
+        ctx.fillRect(canvas.width / 2 - 150, 200, 300, textHeight + 20); // Rectangle noir en arrière-plan du texte
+
         ctx.fillStyle = 'white';
         ctx.font = "bold 20px Arial";
-        ctx.fillText(messageText, canvas.width / 2 - ctx.measureText(messageText).width / 2, 230); // Texte légèrement plus bas
+
+        lines.forEach((line, i) => {
+            ctx.fillText(line, canvas.width / 2 - ctx.measureText(line).width / 2, 230 + i * lineHeight); // Affiche chaque ligne
+        });
     }
 
     ctx.fillStyle = 'white';
@@ -195,6 +220,7 @@ bgImg.onload = () => {
                 }, () => {
                     initPieces();
                     throwPiece(0); // Commence à lancer les pièces après la devinette
+
                     setTimeout(() => {
                         showRiddle({
                             question: "Quelle est la qualité essentielle d'un entrepreneur à succès ?",
@@ -204,10 +230,14 @@ bgImg.onload = () => {
                             ],
                             correctAnswer: 0
                         }, () => {
-                            initPieces();
-                            throwPiece(0); // Lancer les pièces après la deuxième devinette
+                            setTimeout(() => {
+                                showMessageInGame("Ohhh\nMais que se passe t'il ?\nLe financement a rendu l'étoile\nbien plus puissante!\nElle se transforme.");
+                                setTimeout(() => {
+                                    startShakeEffect(3000); // Démarre l'effet de tremblement pour 3 secondes
+                                }, 1000); // Démarre le tremblement 1 seconde après le message
+                            }, 6000); // Affiche le message après 6 secondes
                         });
-                    }, 3000); // Délai de 3 secondes avant la deuxième question
+                    }, 3000); // Délai de 3 secondes après la première devinette
                 });
             }, 3000); // Délai de 3 secondes après le premier message
         });
