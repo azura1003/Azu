@@ -5,7 +5,7 @@ const starImg = new Image();
 const missileImg = new Image();
 const monsterImg = new Image();
 const fakeBossImg = new Image();
-const rainImg = new Image(); 
+const rainImg = new Image();
 
 bgImg.src = './img/level2-bg.png';
 starImg.src = './img/static-star-level2.png';
@@ -33,20 +33,18 @@ let lastFlashTime = 0;
 let nextFlashTime = 0;
 let damageText = [];
 let damageInterval;
-let puzzleShown = false;
 let score = localStorage.getItem('score') ? parseInt(localStorage.getItem('score')) : 0;
 
-const speed = 2.0; // Vitesse réduite
+const speed = 2.0;
 let health = 100;
+let moveSequence = ['up', 'down', 'right', 'left'];
+let currentMoveIndex = 0;
+let arrows = [];
+let moveStartTime = null;
 
 const resizeGame = () => {
-    if (window.innerWidth <= 768) {
-        canvas.width = 431;
-        canvas.height = 768;
-    } else {
-        canvas.width = 431;
-        canvas.height = 768;
-    }
+    canvas.width = 431;
+    canvas.height = 768;
     starX = (canvas.width / 2) - (starWidth / 2);
     starY = (canvas.height / 2) - (starHeight / 2);
 
@@ -56,7 +54,7 @@ const resizeGame = () => {
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
             length: Math.random() * 15 + 10,
-            speed: Math.random() * 2 + 1 // Vitesse de la pluie ajustée
+            speed: Math.random() * 2 + 1
         });
     }
 };
@@ -78,7 +76,7 @@ const fireMissile = () => {
 
 const updateMissiles = () => {
     missiles.forEach((missile, index) => {
-        missile.x += 3; // Vitesse du missile réduite
+        missile.x += 3;
         missile.y += (missile.direction || 0) * 2;
         ctx.drawImage(missileImg, missile.x, missile.y, 20, 20);
 
@@ -105,12 +103,12 @@ const initMonsterWave = () => {
             };
             monsters.push(monster);
         }
-    }, 300); // Rythme d'apparition des monstres réduit
+    }, 300);
 };
 
 const updateMonsters = () => {
     monsters.forEach((monster, index) => {
-        monster.x -= 2; // Vitesse des monstres réduite
+        monster.x -= 2;
 
         ctx.drawImage(monsterImg, monster.x, monster.y, monster.width, monster.height);
 
@@ -133,7 +131,6 @@ const updateMonsters = () => {
             monster.y + monster.height > starY
         ) {
             health -= 10;
-            score -= 10;
             showDamageText();
             if (health <= 0) {
                 gameOver = true;
@@ -154,6 +151,7 @@ const spawnFakeBoss = () => {
         height: starHeight
     };
     startDamageInterval();
+    setTimeout(showMoveSequence, 5000); // Délai de 5 secondes avant l'arrêt sur image
 };
 
 const updateFakeBoss = () => {
@@ -166,15 +164,11 @@ const updateFakeBoss = () => {
 
 const startDamageInterval = () => {
     damageInterval = setInterval(() => {
-        showDamageText();
-        health -= 10;
-        score -= 10;
-        if (health <= 0) {
-            clearInterval(damageInterval);
-            gameOver = true;
+        if (health > 10) {
+            showDamageText();
+            health -= 10;
         }
     }, 1000);
-    setTimeout(showPuzzle, 20000); // Afficher le puzzle après 20 secondes
 };
 
 const stopDamageInterval = () => {
@@ -198,39 +192,80 @@ const updateDamageText = () => {
     });
 };
 
-const showPuzzle = () => {
-    stopDamageInterval(); // Arrête les dégâts continus
+const showMoveSequence = () => {
+    arrows = moveSequence.map((move, index) => ({
+        direction: move,
+        x: (canvas.width / 2) - 60 + index * 50,
+        y: canvas.height - 100,
+    }));
 
-    const puzzleDiv = document.createElement('div');
-    puzzleDiv.style.position = 'fixed';
-    puzzleDiv.style.top = '50%';
-    puzzleDiv.style.left = '50%';
-    puzzleDiv.style.transform = 'translate(-50%, -50%)';
-    puzzleDiv.style.padding = '20px';
-    puzzleDiv.style.backgroundColor = 'black';
-    puzzleDiv.style.color = 'white';
-    puzzleDiv.style.fontSize = '20px';
-    puzzleDiv.style.zIndex = '1000';
-    puzzleDiv.innerHTML = `
-        <p>Pour que Azufake vous lâche, il faut répondre à cette question que seul un gamer pourra répondre :</p>
-        <p>De quelle couleur est le Pokémon de type électrique de Sacha ?</p>
-        <button id="redButton">Rouge</button>
-        <button id="yellowButton">Jaune</button>
-    `;
-
-    document.body.appendChild(puzzleDiv);
-
-    document.getElementById('redButton').addEventListener('click', () => {
-        puzzleDiv.remove();
-        gameOver = true;
-        showMessage("Mauvaise réponse! C'était Jaune! Game Over.");
+    pause = true;
+    drawArrows();
+    showMessage("Mémorisez la séquence et cliquez pour continuer", () => {
+        pause = false;
+        currentMoveIndex = 0;
+        window.requestAnimationFrame(render);
     });
+};
 
-    document.getElementById('yellowButton').addEventListener('click', () => {
-        puzzleDiv.remove();
-        fakeBoss = null; // Azufake disparaît
-        showMessage("Bonne réponse! Azufake a disparu!");
+const drawArrows = () => {
+    arrows.forEach((arrow) => {
+        ctx.fillStyle = 'white';
+        ctx.font = "bold 50px Arial";
+        ctx.fillText(getArrowSymbol(arrow.direction), arrow.x, arrow.y);
     });
+};
+
+const getArrowSymbol = (direction) => {
+    switch (direction) {
+        case 'up':
+            return '↑';
+        case 'down':
+            return '↓';
+        case 'left':
+            return '←';
+        case 'right':
+            return '→';
+        default:
+            return '';
+    }
+};
+
+const checkMove = (move) => {
+    if (move === moveSequence[currentMoveIndex]) {
+        currentMoveIndex++;
+        if (currentMoveIndex === moveSequence.length) {
+            fakeBoss = null;
+            stopDamageInterval();
+            showMessage("Bravo! Azufake a disparu!", () => {
+                // Attendre 3 secondes avant de passer au niveau 3
+                setTimeout(() => {
+                    window.location.href = 'level3.html'; // Redirection vers le niveau 3
+                }, 3000);
+            });
+        }
+    } else {
+        currentMoveIndex = 0;
+    }
+};
+
+const checkMovement = () => {
+    let movementValid = false;
+    switch (moveSequence[currentMoveIndex]) {
+        case 'up':
+            if (starY < canvas.height / 2 - 20) movementValid = true; // vérifie le mouvement vers le haut
+            break;
+        case 'down':
+            if (starY > canvas.height / 2 + 20) movementValid = true; // vérifie le mouvement vers le bas
+            break;
+        case 'left':
+            if (starX < canvas.width / 2 - 20) movementValid = true; // vérifie le mouvement vers la gauche
+            break;
+        case 'right':
+            if (starX > canvas.width / 2 + 20) movementValid = true; // vérifie le mouvement vers la droite
+            break;
+    }
+    if (movementValid) checkMove(moveSequence[currentMoveIndex]);
 };
 
 const startFlashingEffect = () => {
@@ -298,6 +333,7 @@ const render = (timestamp) => {
     index++;
     const bgX = -((index * (speed / 2)) % bgImg.width);
 
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(bgImg, bgX, 0, bgImg.width, canvas.height);
     if (bgX + bgImg.width < canvas.width) {
         ctx.drawImage(bgImg, bgX + bgImg.width, 0, bgImg.width, canvas.height);
@@ -306,6 +342,7 @@ const render = (timestamp) => {
     renderRain();
     renderFlashingEffect();
     updateDamageText();
+    checkMovement();
 
     if (gamePlaying && !gameOver) {
         ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
@@ -318,6 +355,7 @@ const render = (timestamp) => {
         updateMissiles();
         if (monsterWaveActive) updateMonsters();
         if (fakeBoss) updateFakeBoss();
+        drawArrows();
 
         ctx.fillStyle = 'white';
         ctx.fillText(`Level 2`, 10, 50);
@@ -357,7 +395,7 @@ bgImg.onload = () => {
 
     setTimeout(() => {
         showMessage("Mais...Mais c'est quoi ça ? On dirait une pâle copie de notre projet!", () => {
-            setTimeout(showPuzzle, 16000);
+            spawnFakeBoss();
         });
     }, 16000);
 };
@@ -376,6 +414,26 @@ canvas.addEventListener('touchmove', (e) => {
         const touch = e.touches[0];
         starX = touch.clientX - canvas.getBoundingClientRect().left - starWidth / 2;
         starY = touch.clientY - canvas.getBoundingClientRect().top - starHeight / 2;
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (!gamePlaying || gameOver) return;
+    switch (e.key) {
+        case 'ArrowUp':
+            checkMove('up');
+            break;
+        case 'ArrowDown':
+            checkMove('down');
+            break;
+        case 'ArrowLeft':
+            checkMove('left');
+            break;
+        case 'ArrowRight':
+            checkMove('right');
+            break;
+        default:
+            break;
     }
 });
 

@@ -1,45 +1,44 @@
 document.addEventListener('DOMContentLoaded', () => {
     const level1Button = document.getElementById('level-1');
     const level2Button = document.getElementById('level-2');
+    const level3Button = document.getElementById('level-3');
 
-    // Check if Level 2 is unlocked
+    // Check if Levels 2 and 3 are unlocked
     const level2Unlocked = localStorage.getItem('level2Unlocked') === 'true';
+    const level3Unlocked = localStorage.getItem('level3Unlocked') === 'true';
 
     if (level2Unlocked) {
         level2Button.disabled = false; // Enable Level 2 button if unlocked
     }
 
+    if (level3Unlocked) {
+        level3Button.disabled = false; // Enable Level 3 button if unlocked
+    }
+
     // Start Level 1
     level1Button.addEventListener('click', () => {
-        startLevel1();
+        startLevel('app.js'); // Fichier JavaScript pour le Niveau 1
     });
 
     // Start Level 2
     level2Button.addEventListener('click', () => {
-        startLevel2();
+        startLevel('level2.js'); // Fichier JavaScript pour le Niveau 2
+    });
+
+    // Start Level 3
+    level3Button.addEventListener('click', () => {
+        startLevel('level3.js'); // Fichier JavaScript pour le Niveau 3
     });
 });
 
-function startLevel1() {
+function startLevel(scriptSrc) {
     // Hide the menu and show the canvas
     document.getElementById('level-select').style.display = 'none';
     const canvas = document.getElementById('canvas');
     canvas.style.display = 'block';
 
-    // Load and start Level 1 game logic
+    // Load and start the level's game logic
     const script = document.createElement('script');
-    script.src = 'app.js'; // Assuming `app.js` is your Level 1 script
-    document.body.appendChild(script);
-}
-
-function startLevel2() {
-    // Hide the menu and show the canvas
-    document.getElementById('level-select').style.display = 'none';
-    const canvas = document.getElementById('canvas');
-    canvas.style.display = 'block';
-
-    // Load and start Level 2 game logic
-    const script = document.createElement('script');
-    script.src = 'level2.js'; // Assuming `level2.js` is your Level 2 script
+    script.src = scriptSrc;
     document.body.appendChild(script);
 }
