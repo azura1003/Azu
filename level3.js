@@ -195,6 +195,19 @@ bgImg.onload = () => {
                 }, () => {
                     initPieces();
                     throwPiece(0); // Commence à lancer les pièces après la devinette
+                    setTimeout(() => {
+                        showRiddle({
+                            question: "Quelle est la qualité essentielle d'un entrepreneur à succès ?",
+                            options: [
+                                "1. La persévérance, car même quand tout va mal, il faut garder le sourire… et peut-être investir dans des actions de caféine.",
+                                "2. La richesse initiale, sauf que vous n'avez pas gagné à la loterie, pas encore."
+                            ],
+                            correctAnswer: 0
+                        }, () => {
+                            initPieces();
+                            throwPiece(0); // Lancer les pièces après la deuxième devinette
+                        });
+                    }, 3000); // Délai de 3 secondes avant la deuxième question
                 });
             }, 3000); // Délai de 3 secondes après le premier message
         });
