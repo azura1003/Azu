@@ -2,19 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Azuzu</title>
+    <title>Azura Game - Sélection du Niveau</title>
     <link rel="stylesheet" href="./style.css">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 </head>
 <body>
-<header>
-    <h1>Azuzu</h1>
-    <div id="score-container">
-        <div id="meilleurScore"></div> 
-        <div id="ScoreActuel"></div>
+    <header>
+        <h1>Azura Game - Sélection du Niveau</h1>
+    </header>
+
+    <!-- Menu de sélection des niveaux -->
+    <div id="level-select">
+        <button id="level-1">Niveau 1</button>
+        <button id="level-2" disabled>Niveau 2</button>
+        <button id="level-3" disabled>Niveau 3</button>
     </div>
-</header>
-<canvas id="canvas"></canvas>
-<script src="./app.js"></script>
+
+    <!-- Canvas pour le jeu -->
+    <main>
+        <canvas id="canvas" style="display:none;"></canvas>
+    </main>
+
+    <!-- Script pour gérer la logique des niveaux -->
+    <script src="./level-select.js"></script> <!-- Assure-toi que le chemin est correct -->
 </body>
 </html>
+

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Azura Game - Niveau 2</title>
+    <link rel="stylesheet" href="./style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+    const backToMenuButton = document.getElementById('back-to-menu');
+    backToMenuButton.style.display = 'block'; // Afficher le bouton de retour au menu
+    
+    backToMenuButton.addEventListener('click', () => {
+        location.href = 'index.html'; // Retourner au menu principal
+    });
+});
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Azura Game - Niveau 2</h1>
+    </header>
+    <main>
+        <canvas id="canvas"></canvas>
+    </main>
+    <button id="back-to-menu" style="display:none; position:fixed; top:20px; right:20px; z-index: 2000;">Retour au menu</button>
+
+    <script src="./level2.js"></script> <!-- Inclure le script de niveau 2 -->
+</body>
+</html>
