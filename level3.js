@@ -212,6 +212,13 @@ const startAppearEffect = (onComplete) => {
     }, 100); // Répète toutes les 100ms pour un effet de fondu fluide
 };
 
+// Fonction pour gérer la transition vers le niveau 4
+const transitionToLevel4 = () => {
+    setTimeout(() => {
+        window.location.href = 'level4.html'; // Redirige vers le niveau 4 après 1 seconde
+    }, 1000); // Délai de 1 seconde après la fin de la transformation
+};
+
 // Fonction pour afficher les gains de l'étoile
 const displayGains = () => {
     const gains = [
@@ -241,6 +248,9 @@ const displayGains = () => {
             }
         });
     }, 50); // Répète toutes les 50ms pour un mouvement fluide
+
+    // Appeler la transition après avoir affiché les gains
+    setTimeout(transitionToLevel4, 2000); // Délai de 2 secondes pour afficher les gains avant la transition
 };
 
 // Fonction de flash
@@ -284,11 +294,24 @@ const render = () => {
 
     // Affiche le texte du message in-game avec un fond noir, positionné plus bas
     if (messageText) {
-        ctx.fillStyle = 'black';
-        ctx.fillRect(canvas.width / 2 - 150, 200, 300, 40); // Rectangle noir en arrière-plan du texte
-        ctx.fillStyle = 'white';
-        ctx.font = "bold 20px Arial";
-        ctx.fillText(messageText, canvas.width / 2 - ctx.measureText(messageText).width / 2, 230); // Texte légèrement plus bas
+        // Appliquer le style spécial uniquement pour le message "Ohhh... Elle se transforme."
+        if (messageText.includes("Ohhh")) {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(canvas.width / 2 - 160, 190, 320, 150); // Rectangle noir ajusté
+            ctx.fillStyle = 'white';
+            ctx.font = "bold 18px Arial";
+            const lines = messageText.split('\n'); // Gérer les sauts de ligne
+            lines.forEach((line, i) => {
+                ctx.fillText(line, canvas.width / 2 - ctx.measureText(line).width / 2, 210 + i * 25);
+            });
+        } else {
+            // Affichage standard pour les autres messages
+            ctx.fillStyle = 'black';
+            ctx.fillRect(canvas.width / 2 - 150, 200, 300, 40); // Rectangle noir en arrière-plan du texte
+            ctx.fillStyle = 'white';
+            ctx.font = "bold 20px Arial";
+            ctx.fillText(messageText, canvas.width / 2 - ctx.measureText(messageText).width / 2, 230); // Texte légèrement plus bas
+        }
     }
 
     ctx.fillStyle = 'white';
