@@ -79,7 +79,7 @@
         validationPoints.up.x = canvas.width / 2;
         validationPoints.up.y = 50;
         validationPoints.down.x = canvas.width / 2;
-        validationPoints.down.y = canvas.height - 50;
+        validationPoints.down.y = canvas.height - 150;
         validationPoints.left.x = 50;
         validationPoints.left.y = canvas.height / 2;
         validationPoints.right.x = canvas.width - 50;

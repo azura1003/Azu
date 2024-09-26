@@ -96,7 +96,6 @@ const resizeGame = () => {
     starY = (canvas.height / 2) - (starHeight / 2);
     loadingBar.x = canvas.width / 2 - 100; // Ajustez horizontalement
     loadingBar.y = canvas.height - 60; // Ajustez verticalement
-    
 };
 
 // Fonction pour tirer un missile
@@ -225,7 +224,7 @@ const drawLoadingBar = () => {
         ctx.fillRect(loadingBar.x, loadingBar.y, loadingBar.width * (loadingBar.progress / 100), loadingBar.height);
         ctx.fillStyle = 'black';
         ctx.font = 'bold 14px Arial';
-        
+
         if (loadingBar.progress >= 100) {
             ctx.fillText('Utiliser pouvoir', loadingBar.x + loadingBar.width / 2 - 40, loadingBar.y + 15);
         } else {
@@ -298,9 +297,9 @@ const startBossAttack = () => {
         }
 
         if (
-            starX + starWidth > attack.x && 
+            starX + starWidth > attack.x &&
             starX < attack.x + attack.width &&
-            starY + starHeight > attack.y && 
+            starY + starHeight > attack.y &&
             starY < attack.y + attack.height &&
             !isStarBehindPlate()
         ) {
@@ -335,22 +334,46 @@ const starCollisionWithBoss = () => {
             starY + starHeight > boss.y &&
             starY < boss.y + boss.height
         ) {
+            // Afficher l'impact pendant 3 secondes
             impactEffect.active = true;
             impactEffect.x = boss.x;
             impactEffect.y = boss.y;
             boss = null;
             gamePlaying = false; // Arrête le jeu
-            endSequence = true; // Démarre la séquence de fin
+            clearInterval(collisionInterval);
+
+            // Attendre 3 secondes avant de continuer avec le reste du scénario
             setTimeout(() => {
                 impactEffect.active = false;
-                startEndSequence(); // Démarre la séquence de fin
-            }, 2000);
-            clearInterval(collisionInterval);
+                startAfterImpactSequence(); // Lance la séquence après l'impact
+            }, 3000);
         } else {
+            // Mouvement de l'étoile vers le boss avant l'impact
             starX += (boss.x - starX) * 0.02;
             starY += (boss.y - starY) * 0.02;
         }
     }, 20);
+};
+
+// Fonction pour démarrer la séquence après l'impact
+const startAfterImpactSequence = () => {
+    // Continuer avec le mouvement de l'étoile après l'impact
+    starX = canvas.width / 2 - starWidth / 2;
+    starY = canvas.height - starHeight - 20; // Ajustez si nécessaire
+
+    // Initialiser la position du texte pour les crédits
+    creditsY = canvas.height;
+
+    // Assurer que la séquence de fin est active
+    endSequence = true;
+    startEndSequence(); // Démarrer la séquence des crédits
+};
+
+// Fonction de rendu de l'impact
+const renderImpactEffect = () => {
+    if (impactEffect.active) {
+        ctx.drawImage(impactImg, impactEffect.x, impactEffect.y, 200, 200); // Afficher l'image impact.png à la place du boss
+    }
 };
 
 // Démarrer la séquence de fin
@@ -433,7 +456,7 @@ const renderFinalBossSequence = () => {
 const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
     let words = text.split(' ');
     let line = '';
-    for(let n = 0; n < words.length; n++) {
+    for (let n = 0; n < words.length; n++) {
         let testLine = line + words[n] + ' ';
         let metrics = context.measureText(testLine);
         let testWidth = metrics.width;
@@ -441,8 +464,7 @@ const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
             context.fillText(line, x, y);
             line = words[n] + ' ';
             y += lineHeight;
-        }
-        else {
+        } else {
             line = testLine;
         }
     }
@@ -525,17 +547,14 @@ const render = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (endSequence) {
-        // Gestion de la séquence de fin
         renderScrollingText();
     } else if (finalBossSequence) {
         if (finalMessageDisplayed) {
             renderFinalMessage();
         } else {
-            // Gestion de la séquence du boss final
             renderFinalBossSequence();
         }
     } else {
-        // Code existant pour le rendu du jeu
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
         if (boss) updateBoss();
@@ -561,16 +580,11 @@ const render = () => {
                 ctx.drawImage(attackImg, attack.x, attack.y, attack.width, attack.height);
             }
 
-            if (impactEffect.active) {
-                ctx.globalAlpha = impactEffect.opacity;
-                ctx.drawImage(impactImg, impactEffect.x, impactEffect.y, 200, 200);
-                ctx.globalAlpha = 1.0;
-            }
+            renderImpactEffect(); // Affiche l'effet d'impact pendant l'animation
 
             ctx.fillStyle = 'white';
             ctx.font = "bold 30px courier";
             ctx.fillText(`Score: ${score}`, 10, 50);
-
         } else if (gameOver) {
             ctx.fillStyle = 'white';
             ctx.font = "bold 30px courier";
@@ -578,11 +592,9 @@ const render = () => {
             ctx.fillText(`Score: ${score}`, canvas.width / 2 - 50, canvas.height / 2);
             ctx.fillText(`Cliquez pour recommencer`, canvas.width / 2 - 150, canvas.height / 2 + 50);
 
-            // Réinitialiser certaines variables
             loadingBar.active = false;
             loadingBar.flashing = false;
         } else {
-            // Écran d'accueil avant le démarrage du jeu
             ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
             ctx.fillStyle = 'white';
             ctx.font = "bold 30px courier";
