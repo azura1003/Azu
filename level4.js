@@ -10,7 +10,7 @@ const metalImg = new Image();
 const attackImg = new Image();
 const bossMissileImg = new Image();
 const angryImg = new Image();
-const impactImg = new Image();
+const impactImg = new Image(); // Image de l'impact
 const finalBossImg = new Image();
 
 bgImg.src = './img/usa.png';
@@ -21,12 +21,12 @@ metalImg.src = './img/metal.png';
 attackImg.src = './img/bande.png';
 bossMissileImg.src = './img/dislike.png';
 angryImg.src = './img/angry.png';
-impactImg.src = './img/impact.png';
+impactImg.src = './img/impact.png'; // Charger l'image de l'impact
 finalBossImg.src = './img/mark.png';
 
 // Variables du jeu
-let endSequence = false; // Indique si la séquence de fin est en cours
-let finalBossSequence = false; // Indique si la séquence du boss final est en cours
+let endSequence = false;
+let finalBossSequence = false;
 let gamePlaying = false;
 let gameOver = false;
 let pause = false;
@@ -57,7 +57,7 @@ let score = localStorage.getItem('score') ? parseInt(localStorage.getItem('score
 
 let loadingBar = {
     x: canvas.width / 2 - 100,
-    y: 250, // Sera initialisé dans resizeGame()
+    y: 250,
     width: 200,
     height: 20,
     progress: 0,
@@ -71,7 +71,7 @@ let bossAttacking = true;
 const speed = 2.0;
 
 // Variables pour la séquence de fin
-let creditsY = canvas.height; // Position initiale du texte défilant
+let creditsY = canvas.height;
 const creditsText = [
     "Merci d'avoir joué à Azura Game!",
     "Ce jeu a été entièrement codé par Noor,",
@@ -84,9 +84,9 @@ const creditsText = [
 ];
 
 let finalBossMessageShown = false;
-let finalBossResponse = ''; // Stocke la réponse du joueur
-let finalMessageDisplayed = false; // Indique si le message final est affiché
-let finalBossOpacity = 0; // Pour l'effet de fade-in du boss final
+let finalBossResponse = '';
+let finalMessageDisplayed = false;
+let finalBossOpacity = 0;
 
 // Fonction pour redimensionner le jeu
 const resizeGame = () => {
@@ -94,8 +94,8 @@ const resizeGame = () => {
     canvas.height = 768;
     starX = (canvas.width / 2) - (starWidth / 2);
     starY = (canvas.height / 2) - (starHeight / 2);
-    loadingBar.x = canvas.width / 2 - 100; // Ajustez horizontalement
-    loadingBar.y = canvas.height - 60; // Ajustez verticalement
+    loadingBar.x = canvas.width / 2 - 100;
+    loadingBar.y = canvas.height - 60;
 };
 
 // Fonction pour tirer un missile
@@ -334,21 +334,22 @@ const starCollisionWithBoss = () => {
             starY + starHeight > boss.y &&
             starY < boss.y + boss.height
         ) {
-            // Afficher l'impact pendant 3 secondes
+            // Capture la position du boss avant de le supprimer
             impactEffect.active = true;
             impactEffect.x = boss.x;
             impactEffect.y = boss.y;
-            boss = null;
-            gamePlaying = false; // Arrête le jeu
-            clearInterval(collisionInterval);
 
-            // Attendre 3 secondes avant de continuer avec le reste du scénario
+            // Supprime le boss et affiche l'impact
+            boss = null;
+
+            // Continue le rendu pour afficher l'impact pendant 3 secondes
             setTimeout(() => {
                 impactEffect.active = false;
-                startAfterImpactSequence(); // Lance la séquence après l'impact
+                startAfterImpactSequence();
             }, 3000);
+
+            clearInterval(collisionInterval);
         } else {
-            // Mouvement de l'étoile vers le boss avant l'impact
             starX += (boss.x - starX) * 0.02;
             starY += (boss.y - starY) * 0.02;
         }
@@ -357,35 +358,26 @@ const starCollisionWithBoss = () => {
 
 // Fonction pour démarrer la séquence après l'impact
 const startAfterImpactSequence = () => {
-    // Continuer avec le mouvement de l'étoile après l'impact
     starX = canvas.width / 2 - starWidth / 2;
-    starY = canvas.height - starHeight - 20; // Ajustez si nécessaire
+    starY = canvas.height - starHeight - 20;
 
-    // Initialiser la position du texte pour les crédits
     creditsY = canvas.height;
-
-    // Assurer que la séquence de fin est active
     endSequence = true;
-    startEndSequence(); // Démarrer la séquence des crédits
+    startEndSequence();
 };
 
 // Fonction de rendu de l'impact
 const renderImpactEffect = () => {
     if (impactEffect.active) {
-        ctx.drawImage(impactImg, impactEffect.x, impactEffect.y, 200, 200); // Afficher l'image impact.png à la place du boss
+        ctx.drawImage(impactImg, impactEffect.x, impactEffect.y, 200, 200);
     }
 };
 
 // Démarrer la séquence de fin
 const startEndSequence = () => {
-    // Positionner l'étoile en bas de l'écran
     starX = canvas.width / 2 - starWidth / 2;
-    starY = canvas.height - starHeight - 20; // Ajustez si nécessaire
-
-    // Initialiser la position du texte
+    starY = canvas.height - starHeight - 20;
     creditsY = canvas.height;
-
-    // Assurer que la séquence de fin est active
     endSequence = true;
 };
 
@@ -394,18 +386,15 @@ const renderScrollingText = () => {
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Dessiner l'étoile en bas de l'écran
     ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
 
-    // Définir les propriétés du texte
     ctx.fillStyle = 'white';
     ctx.font = "bold 20px Arial";
     ctx.textAlign = 'center';
 
-    let lineHeight = 30; // Ajuster l'espacement entre les lignes
+    let lineHeight = 30;
     creditsText.forEach((line, index) => {
         let y = creditsY + index * lineHeight;
-        // Effet de fondu
         let alpha = 1;
         if (y < canvas.height / 2) {
             alpha = Math.max(0, (y - canvas.height / 4) / (canvas.height / 4));
@@ -413,12 +402,10 @@ const renderScrollingText = () => {
         ctx.globalAlpha = alpha;
         ctx.fillText(line, canvas.width / 2, y);
     });
-    ctx.globalAlpha = 1.0; // Réinitialiser l'opacité
+    ctx.globalAlpha = 1.0;
 
-    // Déplacer le texte vers le haut plus lentement
-    creditsY -= 0.5; // Ajustez la vitesse de défilement si nécessaire
+    creditsY -= 0.5;
 
-    // Vérifier si le texte a entièrement défilé
     if (creditsY + creditsText.length * lineHeight < 0) {
         endSequence = false;
         finalBossSequence = true;
@@ -430,22 +417,19 @@ const renderFinalBossSequence = () => {
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Dessiner le boss final avec effet de fade-in
     if (finalBossOpacity < 1) {
-        finalBossOpacity += 0.01; // Ajustez la vitesse du fade-in
+        finalBossOpacity += 0.01;
     }
     ctx.globalAlpha = finalBossOpacity;
     ctx.drawImage(finalBossImg, canvas.width / 2 - 100, 100, 200, 200);
-    ctx.globalAlpha = 1.0; // Réinitialiser l'opacité
+    ctx.globalAlpha = 1.0;
 
-    // Afficher le message du boss
     ctx.fillStyle = 'white';
     ctx.font = "bold 18px Arial";
     ctx.textAlign = 'center';
     let message = "Mark : Bravo, petite étoile tu es devenue bien grande, et comme tu commences à faire des vagues nous t'avons remarqué, j'aimerais t'acheter pour 80 millions de $. Acceptes-tu ?";
     wrapText(ctx, message, canvas.width / 2, 350, 400, 24);
 
-    // Afficher les boutons Oui et Non
     if (!finalBossMessageShown && finalBossOpacity >= 1) {
         createChoiceButtons();
         finalBossMessageShown = true;
@@ -473,7 +457,6 @@ const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
 
 // Créer les boutons de choix Oui et Non
 const createChoiceButtons = () => {
-    // Créer le bouton Oui
     const yesButton = document.createElement('button');
     yesButton.innerText = 'Oui';
     yesButton.style.position = 'absolute';
@@ -483,7 +466,6 @@ const createChoiceButtons = () => {
     yesButton.style.fontSize = '18px';
     document.body.appendChild(yesButton);
 
-    // Créer le bouton Non
     const noButton = document.createElement('button');
     noButton.innerText = 'Non';
     noButton.style.position = 'absolute';
@@ -493,7 +475,6 @@ const createChoiceButtons = () => {
     noButton.style.fontSize = '18px';
     document.body.appendChild(noButton);
 
-    // Gestion des clics sur les boutons
     yesButton.addEventListener('click', () => {
         finalBossResponse = 'Oui';
         document.body.removeChild(yesButton);
@@ -513,7 +494,6 @@ const createChoiceButtons = () => {
 const showFinalMessage = () => {
     finalMessageDisplayed = true;
 
-    // Débloquer les niveaux 3 et 4
     let unlockedLevels = JSON.parse(localStorage.getItem('unlockedLevels')) || [1];
     if (!unlockedLevels.includes(3)) {
         unlockedLevels.push(3);
@@ -524,7 +504,7 @@ const showFinalMessage = () => {
     localStorage.setItem('unlockedLevels', JSON.stringify(unlockedLevels));
 
     setTimeout(() => {
-        window.location.href = 'index.html'; // Rediriger vers le menu de sélection de niveau
+        window.location.href = 'index.html';
     }, 3000);
 };
 
@@ -580,7 +560,7 @@ const render = () => {
                 ctx.drawImage(attackImg, attack.x, attack.y, attack.width, attack.height);
             }
 
-            renderImpactEffect(); // Affiche l'effet d'impact pendant l'animation
+            renderImpactEffect();
 
             ctx.fillStyle = 'white';
             ctx.font = "bold 30px courier";
