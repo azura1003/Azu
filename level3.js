@@ -24,6 +24,13 @@ let score = localStorage.getItem('score') ? parseInt(localStorage.getItem('score
 let messageText = ''; // Texte du message in-game
 let messageTimer; // Timer pour afficher le message temporairement
 let shakeDuration = 0; // Durée du tremblement
+let fadingEffect = false; // Détermine si l'effet de fondu est en cours
+let fadeOpacity = 1; // Opacité actuelle de l'étoile
+let oscillationSpeed = 0.02; // Vitesse d'oscillation de l'étoile
+let flashEffect = false; // Détermine si l'effet de flash est actif
+let flashDuration = 0; // Durée de l'effet de flash
+let finalShakeEffect = false; // Indicateur pour le tremblement final intense
+let gainTexts = []; // Liste des gains à afficher
 
 const speed = 2.0;
 
@@ -152,19 +159,112 @@ const showRiddle = (riddle, callback) => {
 };
 
 // Fonction de tremblement de terre
-const startShakeEffect = (duration) => {
-    shakeDuration = duration; // Durée du tremblement
+const startShakeEffect = () => {
     const shakeInterval = setInterval(() => {
-        if (shakeDuration > 0) {
+        if (fadingEffect || finalShakeEffect) {
             const offsetX = Math.random() * 10 - 5; // Génère un décalage horizontal aléatoire
             const offsetY = Math.random() * 10 - 5; // Génère un décalage vertical aléatoire
             canvas.style.transform = `translate(${offsetX}px, ${offsetY}px)`; // Applique le décalage au canvas
-            shakeDuration -= 50; // Réduit la durée du tremblement
         } else {
             clearInterval(shakeInterval);
             canvas.style.transform = 'translate(0, 0)'; // Réinitialise la position du canvas
         }
-    }, 50); // Répète toutes les 50ms
+    }, 100); // Répète toutes les 100ms (moins fréquent)
+};
+
+// Fonction de fondu et oscillation avec clignotement
+const startFadingEffect = (onComplete) => {
+    fadingEffect = true; // Démarre l'effet de fondu et d'oscillation
+    flashEffect = true; // Active l'effet de flash
+    const fadeInterval = setInterval(() => {
+        if (fadingEffect) {
+            fadeOpacity -= 0.02; // Diminue plus lentement l'opacité pour prolonger l'effet
+            starWidth += Math.sin(oscillationSpeed) * 0.5; // Oscille la largeur de l'étoile
+            starHeight += Math.sin(oscillationSpeed) * 0.5; // Oscille la hauteur de l'étoile
+            oscillationSpeed += 0.05; // Augmente la vitesse d'oscillation
+
+            if (fadeOpacity <= 0) {
+                clearInterval(fadeInterval);
+                flashEffect = true; // Continue l'effet de flash jusqu'à l'apparition du nouveau visuel
+                fadeOpacity = 0; // Garde l'opacité à 0
+                starImg.src = './img/static-star-level3.png'; // Change l'image de l'étoile
+                setTimeout(() => {
+                    startAppearEffect(onComplete); // Démarre l'effet d'apparition après un petit délai
+                }, 500); // Délai avant de commencer l'apparition
+            }
+        }
+    }, 100); // Répète toutes les 100ms pour prolonger l'effet
+};
+
+// Fonction d'apparition avec fondu et effets lumineux
+const startAppearEffect = (onComplete) => {
+    fadeOpacity = 0; // Commence avec une opacité de 0 pour le nouveau visuel
+    const appearInterval = setInterval(() => {
+        if (fadeOpacity < 1) {
+            fadeOpacity += 0.05; // Augmente progressivement l'opacité
+            flashEffect = true; // Continue l'effet de flash
+        } else {
+            clearInterval(appearInterval);
+            fadeOpacity = 1; // Assure que l'opacité est complètement à 1
+            flashEffect = false; // Arrête l'effet de flash
+            if (onComplete) onComplete();
+        }
+    }, 100); // Répète toutes les 100ms pour un effet de fondu fluide
+};
+
+// Fonction pour gérer la transition vers le niveau 4
+const transitionToLevel4 = () => {
+    setTimeout(() => {
+        window.location.href = 'level4.html'; // Redirige vers le niveau 4 après 1 seconde
+    }, 1000); // Délai de 1 seconde après la fin de la transformation
+};
+
+// Fonction pour afficher les gains de l'étoile
+const displayGains = () => {
+    const gains = [
+        "+1 sort",
+        "+100 vitesse",
+        "+100 puissance"
+    ];
+
+    gains.forEach((gain, index) => {
+        setTimeout(() => {
+            gainTexts.push({
+                text: gain,
+                x: starX + starWidth / 2,
+                y: starY,
+                opacity: 1.0
+            });
+        }, index * 500); // Chaque gain commence à 500ms d'intervalle
+    });
+
+    setInterval(() => {
+        gainTexts.forEach((gain, index) => {
+            if (gain.opacity > 0) {
+                gain.opacity -= 0.04; // Réduit plus rapidement l'opacité
+                gain.y -= 1; // Monte plus rapidement le texte
+            } else {
+                gainTexts.splice(index, 1); // Supprime le texte lorsqu'il devient invisible
+            }
+        });
+    }, 50); // Répète toutes les 50ms pour un mouvement fluide
+
+    // Appeler la transition après avoir affiché les gains
+    setTimeout(transitionToLevel4, 2000); // Délai de 2 secondes pour afficher les gains avant la transition
+};
+
+// Fonction de flash
+const renderFlashEffect = () => {
+    if (flashEffect) {
+        const currentTime = performance.now();
+        if (currentTime - flashDuration > 200) { // Rend les clignotements moins fréquents
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            flashDuration = currentTime + 200; // Plus de temps entre les flashes
+        } else if (currentTime - flashDuration > 100) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
 };
 
 // Rendu du jeu
@@ -173,31 +273,52 @@ const render = () => {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-    ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
-    ctx.drawImage(businessImg, businessX, businessY, 100, 100); // Affiche 'business.png'
+    
+    if (!fadingEffect) {
+        ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
+    } else {
+        ctx.globalAlpha = fadeOpacity; // Applique l'opacité à l'étoile
+        ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
+        ctx.globalAlpha = 1; // Réinitialise l'opacité pour d'autres dessins
+    }
 
+    ctx.drawImage(businessImg, businessX, businessY, 100, 100); // Affiche 'business.png'
     updatePieces();
+
+    // Affiche le texte des gains
+    gainTexts.forEach((gain) => {
+        ctx.fillStyle = `rgba(0, 255, 0, ${gain.opacity})`; // Texte vert
+        ctx.font = "bold 20px Arial";
+        ctx.fillText(gain.text, gain.x, gain.y);
+    });
 
     // Affiche le texte du message in-game avec un fond noir, positionné plus bas
     if (messageText) {
-        const lines = messageText.split('\n'); // Divise le texte en lignes
-        const lineHeight = 20; // Hauteur d'une ligne
-        const textHeight = lines.length * lineHeight; // Hauteur totale du texte
-
-        ctx.fillStyle = 'black';
-        ctx.fillRect(canvas.width / 2 - 150, 200, 300, textHeight + 20); // Rectangle noir en arrière-plan du texte
-
-        ctx.fillStyle = 'white';
-        ctx.font = "bold 20px Arial";
-
-        lines.forEach((line, i) => {
-            ctx.fillText(line, canvas.width / 2 - ctx.measureText(line).width / 2, 230 + i * lineHeight); // Affiche chaque ligne
-        });
+        // Appliquer le style spécial uniquement pour le message "Ohhh... Elle se transforme."
+        if (messageText.includes("Ohhh")) {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(canvas.width / 2 - 160, 190, 320, 150); // Rectangle noir ajusté
+            ctx.fillStyle = 'white';
+            ctx.font = "bold 18px Arial";
+            const lines = messageText.split('\n'); // Gérer les sauts de ligne
+            lines.forEach((line, i) => {
+                ctx.fillText(line, canvas.width / 2 - ctx.measureText(line).width / 2, 210 + i * 25);
+            });
+        } else {
+            // Affichage standard pour les autres messages
+            ctx.fillStyle = 'black';
+            ctx.fillRect(canvas.width / 2 - 150, 200, 300, 40); // Rectangle noir en arrière-plan du texte
+            ctx.fillStyle = 'white';
+            ctx.font = "bold 20px Arial";
+            ctx.fillText(messageText, canvas.width / 2 - ctx.measureText(messageText).width / 2, 230); // Texte légèrement plus bas
+        }
     }
 
     ctx.fillStyle = 'white';
     ctx.fillText(`Score: ${score}`, 10, 50);
     ctx.font = "bold 30px courier";
+
+    renderFlashEffect(); // Affiche l'effet de flash
 
     window.requestAnimationFrame(render);
 };
@@ -230,16 +351,27 @@ bgImg.onload = () => {
                             ],
                             correctAnswer: 0
                         }, () => {
+                            initPieces(); // Initialiser les pièces après la deuxième question
+                            throwPiece(0); // Lancer les pièces après la deuxième question
                             setTimeout(() => {
                                 showMessageInGame("Ohhh\nMais que se passe t'il ?\nLe financement a rendu l'étoile\nbien plus puissante!\nElle se transforme.");
                                 setTimeout(() => {
-                                    startShakeEffect(3000); // Démarre l'effet de tremblement pour 3 secondes
-                                }, 1000); // Démarre le tremblement 1 seconde après le message
-                            }, 6000); // Affiche le message après 6 secondes
+                                    startShakeEffect(); // Démarre l'effet de tremblement indéfini
+                                    setTimeout(() => {
+                                        startFadingEffect(() => {
+                                            finalShakeEffect = true; // Active le tremblement final
+                                            setTimeout(() => {
+                                                finalShakeEffect = false; // Arrête le tremblement final
+                                                displayGains(); // Affiche les gains de l'étoile
+                                            }, 2000); // Durée du tremblement final intense
+                                        }); // Démarre l'effet de fondu et d'oscillation
+                                    }, 5000); // Prolonge le fondu
+                                }, 5000); // Prolonge le tremblement
+                            }, 7000); // Affiche le message après 7 secondes
                         });
-                    }, 3000); // Délai de 3 secondes après la première devinette
+                    }, 5000); // Délai de 5 secondes après la première devinette
                 });
-            }, 3000); // Délai de 3 secondes après le premier message
+            }, 5000); // Délai de 5 secondes après le premier message
         });
     }, 3000); // Délai de 3 secondes avant d'afficher le premier message
 };
