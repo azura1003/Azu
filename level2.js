@@ -501,7 +501,7 @@
             ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
             ctx.fillStyle = 'white';
             ctx.font = 'bold 30px courier';
-            ctx.fillText('Cliquez pour commencer', 90, 535);
+            ctx.fillText('Cliquez pour commencer', 25, 300);
         }
 
         window.requestAnimationFrame(render);

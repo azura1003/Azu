@@ -57,7 +57,7 @@ let score = localStorage.getItem('score') ? parseInt(localStorage.getItem('score
 
 let loadingBar = {
     x: canvas.width / 2 - 100,
-    y: 0, // Sera initialisé dans resizeGame()
+    y: 250, // Sera initialisé dans resizeGame()
     width: 200,
     height: 20,
     progress: 0,
@@ -74,9 +74,12 @@ const speed = 2.0;
 let creditsY = canvas.height; // Position initiale du texte défilant
 const creditsText = [
     "Merci d'avoir joué à Azura Game!",
-    "Ce jeu a été entièrement codé par Noor, fondateur de Azura.",
-    "C'est une manière originale de montrer notre parcours sur le projet.",
-    "Nous espérons que vous avez apprécié l'expérience.",
+    "Ce jeu a été entièrement codé par Noor,",
+    "le co-fondateur d'Azura",
+    "C'est une manière originale",
+    "de montrer notre parcours sur le projet.",
+    "Nous espérons que vous avez apprécié",
+    "l'expérience.",
     "Fin."
 ];
 
@@ -91,7 +94,9 @@ const resizeGame = () => {
     canvas.height = 768;
     starX = (canvas.width / 2) - (starWidth / 2);
     starY = (canvas.height / 2) - (starHeight / 2);
-    loadingBar.y = starY + starHeight + 80;
+    loadingBar.x = canvas.width / 2 - 100; // Ajustez horizontalement
+    loadingBar.y = canvas.height - 60; // Ajustez verticalement
+    
 };
 
 // Fonction pour tirer un missile
@@ -220,7 +225,12 @@ const drawLoadingBar = () => {
         ctx.fillRect(loadingBar.x, loadingBar.y, loadingBar.width * (loadingBar.progress / 100), loadingBar.height);
         ctx.fillStyle = 'black';
         ctx.font = 'bold 14px Arial';
-        ctx.fillText(`${loadingBar.progress}%`, loadingBar.x + loadingBar.width / 2 - 10, loadingBar.y + 15);
+        
+        if (loadingBar.progress >= 100) {
+            ctx.fillText('Utiliser pouvoir', loadingBar.x + loadingBar.width / 2 - 40, loadingBar.y + 15);
+        } else {
+            ctx.fillText(`${loadingBar.progress}%`, loadingBar.x + loadingBar.width / 2 - 10, loadingBar.y + 15);
+        }
 
         if (loadingBar.progress >= 100) {
             loadingBar.flashing = !loadingBar.flashing;
@@ -409,7 +419,7 @@ const renderFinalBossSequence = () => {
     ctx.fillStyle = 'white';
     ctx.font = "bold 18px Arial";
     ctx.textAlign = 'center';
-    let message = "Bravo, petite étoile tu es devenue bien grande, et comme tu commences à faire de l'ombre à mes projets j'aimerais t'acheter pour 80 millions de $. Acceptes-tu ?";
+    let message = "Mark : Bravo, petite étoile tu es devenue bien grande, et comme tu commences à faire des vagues nous t'avons remarqué, j'aimerais t'acheter pour 80 millions de $. Acceptes-tu ?";
     wrapText(ctx, message, canvas.width / 2, 350, 400, 24);
 
     // Afficher les boutons Oui et Non

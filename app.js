@@ -20,6 +20,10 @@ bossHaterImg.src = './img/boss-hater.png';
 bossMissileImg.src = './img/poussieresnoir.png';
 equipmentImg.src = './img/wings.png'; // Charger l'image de l'équipement
 
+const ambianceAudio = new Audio('./audio/level1-ambiance.mp3'); // Assurez-vous que le chemin est correct
+ambianceAudio.loop = true; // Répéter l'audio
+ambianceAudio.volume = 0.5; // Ajuster le volume (0.0 à 1.0)
+
 // Variables du jeu
 let gamePlaying = false;
 let gameOver = false;
@@ -36,6 +40,20 @@ let lastMissileTime = 0;
 let lastBossMissileTime = 0;
 let haters = [];
 let speed = 2.0; // Vitesse du jeu, ajustée dans resizeGame()
+
+// Fonction pour démarrer le son d'ambiance du niveau
+const startLevelAmbiance = () => {
+    ambianceAudio.play().catch(error => {
+        console.error("Erreur lors de la lecture de l'audio :", error);
+    });
+};
+
+// Fonction pour arrêter le son d'ambiance
+const stopLevelAmbiance = () => {
+    ambianceAudio.pause();
+    ambianceAudio.currentTime = 0; // Remet à zéro pour rejouer depuis le début la prochaine fois
+};
+
 
 const gravity = 0.5;
 
@@ -58,7 +76,7 @@ const resizeGame = () => {
         initialSize = [51 * 0.4, 36 * 0.4];
         maxSize = [51 * 1.2, 36 * 2.0];
 
-        speed = 2.0; // Vitesse par défaut sur les écrans plus grands
+        speed = 1.5; // Vitesse par défaut sur les écrans plus grands
     }
     starWidth = initialSize[0];
     starHeight = initialSize[1];
@@ -322,7 +340,11 @@ const render = (timestamp) => {
     if (!startTime) startTime = timestamp;
     if (pause) {
         return;
+
+        if (gameOver) {
+            stopLevelAmbiance();
     }
+}
 
     index++;
     const bgX = -((index * (speed / 2)) % bgImg.width);
@@ -416,8 +438,8 @@ const render = (timestamp) => {
         ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
         ctx.fillStyle = 'white';
         ctx.font = "bold 30px courier";
-        ctx.fillText(`Meilleur score: ${meilleurScore}`, 85, 245);
-        ctx.fillText('Cliquez pour jouer', 90, 535);
+        ctx.fillText(`Meilleur score: ${meilleurScore}`, 55, 245);
+        ctx.fillText('Cliquez pour jouer', 60, 535);
     }
 
     if (!pieceCollected) {
@@ -451,6 +473,7 @@ canvas.addEventListener('touchmove', (e) => {
 document.addEventListener('click', () => {
     if (!gamePlaying && !gameOver && !pieceCollected) {
         showWelcomeMessage();
+        startLevelAmbiance();
     } else if (gameOver) {
         gameOver = false;
         gamePlaying = true;
@@ -476,12 +499,13 @@ document.addEventListener('click', () => {
             initPiece();
             startTime = null;
             missiles = [];
+            startLevelAmbiance();
         }
     }
 });
 
 setInterval(() => {
-    if (boss && Date.now() - lastBossMissileTime > 1000) {
+    if (boss && Date.now() - lastBossMissileTime > 2000) {
         fireBossMissile();
         lastBossMissileTime = Date.now();
     }
