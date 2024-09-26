@@ -1,5 +1,7 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+
+// Chargement des images
 const bgImg = new Image();
 const starImg = new Image();
 const missileImg = new Image();
@@ -9,6 +11,7 @@ const attackImg = new Image();
 const bossMissileImg = new Image();
 const angryImg = new Image();
 const impactImg = new Image();
+const finalBossImg = new Image();
 
 bgImg.src = './img/usa.png';
 starImg.src = './img/static-star-level3.png';
@@ -19,7 +22,11 @@ attackImg.src = './img/bande.png';
 bossMissileImg.src = './img/dislike.png';
 angryImg.src = './img/angry.png';
 impactImg.src = './img/impact.png';
+finalBossImg.src = './img/mark.png';
 
+// Variables du jeu
+let endSequence = false; // Indique si la séquence de fin est en cours
+let finalBossSequence = false; // Indique si la séquence du boss final est en cours
 let gamePlaying = false;
 let gameOver = false;
 let pause = false;
@@ -50,7 +57,7 @@ let score = localStorage.getItem('score') ? parseInt(localStorage.getItem('score
 
 let loadingBar = {
     x: canvas.width / 2 - 100,
-    y: starY + starHeight + 80,
+    y: 0, // Sera initialisé dans resizeGame()
     width: 200,
     height: 20,
     progress: 0,
@@ -63,6 +70,22 @@ let bossAttacking = true;
 
 const speed = 2.0;
 
+// Variables pour la séquence de fin
+let creditsY = canvas.height; // Position initiale du texte défilant
+const creditsText = [
+    "Merci d'avoir joué à Azura Game!",
+    "Ce jeu a été entièrement codé par Noor, fondateur de Azura.",
+    "C'est une manière originale de montrer notre parcours sur le projet.",
+    "Nous espérons que vous avez apprécié l'expérience.",
+    "Fin."
+];
+
+let finalBossMessageShown = false;
+let finalBossResponse = ''; // Stocke la réponse du joueur
+let finalMessageDisplayed = false; // Indique si le message final est affiché
+let finalBossOpacity = 0; // Pour l'effet de fade-in du boss final
+
+// Fonction pour redimensionner le jeu
 const resizeGame = () => {
     canvas.width = 431;
     canvas.height = 768;
@@ -71,6 +94,7 @@ const resizeGame = () => {
     loadingBar.y = starY + starHeight + 80;
 };
 
+// Fonction pour tirer un missile
 const fireMissile = () => {
     if (!bossAttacking) return;
 
@@ -86,6 +110,7 @@ const fireMissile = () => {
     }
 };
 
+// Fonction pour le tir des missiles du boss
 const fireBossMissile = () => {
     if (!boss || !bossAttacking) return;
     const missileX = boss.x + boss.width / 2 - 10;
@@ -104,6 +129,7 @@ const fireBossMissile = () => {
     bossAttackType = bossAttackType === 'dislike' ? 'angry' : 'dislike';
 };
 
+// Mise à jour des missiles
 const updateMissiles = () => {
     missiles.forEach((missile, index) => {
         missile.y -= 1.5;
@@ -148,6 +174,7 @@ const updateMissiles = () => {
     });
 };
 
+// Affichage du texte de dégâts
 const showDamageText = (text) => {
     if (boss) {
         damageText.push({ x: boss.x + boss.width / 2, y: boss.y, opacity: 1.0, text: text });
@@ -167,6 +194,7 @@ const updateDamageText = () => {
     });
 };
 
+// Affichage de la barre de vie du boss
 const drawBossHealthBar = () => {
     if (boss) {
         const barWidth = 120;
@@ -183,6 +211,7 @@ const drawBossHealthBar = () => {
     }
 };
 
+// Affichage de la barre de chargement
 const drawLoadingBar = () => {
     if (loadingBar.active) {
         ctx.fillStyle = 'grey';
@@ -213,6 +242,7 @@ const startLoadingBar = () => {
     }, 100);
 };
 
+// Mise à jour du boss
 const updateBoss = () => {
     if (boss) {
         boss.x += boss.directionX * 2;
@@ -230,12 +260,14 @@ const updateBoss = () => {
     }
 };
 
+// Dessiner les plaques métalliques
 const drawMetalPlates = () => {
     metalPlates.forEach(plate => {
         ctx.drawImage(metalImg, plate.x, plate.y, plate.width, plate.height);
     });
 };
 
+// Démarrer l'attaque du boss
 const startBossAttack = () => {
     attack.active = true;
     attack.y = -attack.height;
@@ -268,6 +300,7 @@ const startBossAttack = () => {
     }, 20);
 };
 
+// Vérifier si l'étoile est derrière une plaque
 const isStarBehindPlate = () => {
     return metalPlates.some(plate => {
         return (
@@ -279,6 +312,7 @@ const isStarBehindPlate = () => {
     });
 };
 
+// Collision de l'étoile avec le boss
 const starCollisionWithBoss = () => {
     const collisionInterval = setInterval(() => {
         if (!boss) {
@@ -295,9 +329,11 @@ const starCollisionWithBoss = () => {
             impactEffect.x = boss.x;
             impactEffect.y = boss.y;
             boss = null;
+            gamePlaying = false; // Arrête le jeu
+            endSequence = true; // Démarre la séquence de fin
             setTimeout(() => {
                 impactEffect.active = false;
-                startEndSequence(); // Démarrer les crédits après l'impact
+                startEndSequence(); // Démarre la séquence de fin
             }, 2000);
             clearInterval(collisionInterval);
         } else {
@@ -307,102 +343,262 @@ const starCollisionWithBoss = () => {
     }, 20);
 };
 
+// Démarrer la séquence de fin
 const startEndSequence = () => {
-    let endInterval = setInterval(() => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'black'; // Changer le fond en noir
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        starX = canvas.width / 2 - starWidth / 2;
-        starY = canvas.height - starHeight;
-        ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
+    // Positionner l'étoile en bas de l'écran
+    starX = canvas.width / 2 - starWidth / 2;
+    starY = canvas.height - starHeight - 20; // Ajustez si nécessaire
 
-        // Affichage des messages de fin
-        ctx.fillStyle = 'white';
-        ctx.font = "bold 20px Arial";
-        ctx.fillText("Crédits : merci d'avoir joué à Azuzu, le jeu est maintenant fini.", canvas.width / 2 - 200, 50);
-        ctx.fillText("Ce jeu a été entièrement codé par Noor, fondateur de Azura.", canvas.width / 2 - 200, 80);
-        setTimeout(() => {
-            ctx.clearRect(0, 0, canvas.width, 100);
-            ctx.fillText("C'est une manière un peu originale de montrer notre parcours sur le projet", canvas.width / 2 - 200, 50);
-            setTimeout(() => {
-                ctx.clearRect(0, 0, canvas.width, 100);
-                ctx.fillText("Mais attendez qui voilà ? :o ...", canvas.width / 2 - 200, 50);
-                clearInterval(endInterval);
-            }, 3000);
-        }, 3000);
-    }, 50);
+    // Initialiser la position du texte
+    creditsY = canvas.height;
+
+    // Assurer que la séquence de fin est active
+    endSequence = true;
 };
 
+// Afficher le texte défilant des crédits
+const renderScrollingText = () => {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Dessiner l'étoile en bas de l'écran
+    ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
+
+    // Définir les propriétés du texte
+    ctx.fillStyle = 'white';
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = 'center';
+
+    let lineHeight = 30; // Ajuster l'espacement entre les lignes
+    creditsText.forEach((line, index) => {
+        let y = creditsY + index * lineHeight;
+        // Effet de fondu
+        let alpha = 1;
+        if (y < canvas.height / 2) {
+            alpha = Math.max(0, (y - canvas.height / 4) / (canvas.height / 4));
+        }
+        ctx.globalAlpha = alpha;
+        ctx.fillText(line, canvas.width / 2, y);
+    });
+    ctx.globalAlpha = 1.0; // Réinitialiser l'opacité
+
+    // Déplacer le texte vers le haut plus lentement
+    creditsY -= 0.5; // Ajustez la vitesse de défilement si nécessaire
+
+    // Vérifier si le texte a entièrement défilé
+    if (creditsY + creditsText.length * lineHeight < 0) {
+        endSequence = false;
+        finalBossSequence = true;
+    }
+};
+
+// Afficher la séquence du boss final
+const renderFinalBossSequence = () => {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Dessiner le boss final avec effet de fade-in
+    if (finalBossOpacity < 1) {
+        finalBossOpacity += 0.01; // Ajustez la vitesse du fade-in
+    }
+    ctx.globalAlpha = finalBossOpacity;
+    ctx.drawImage(finalBossImg, canvas.width / 2 - 100, 100, 200, 200);
+    ctx.globalAlpha = 1.0; // Réinitialiser l'opacité
+
+    // Afficher le message du boss
+    ctx.fillStyle = 'white';
+    ctx.font = "bold 18px Arial";
+    ctx.textAlign = 'center';
+    let message = "Bravo, petite étoile tu es devenue bien grande, et comme tu commences à faire de l'ombre à mes projets j'aimerais t'acheter pour 80 millions de $. Acceptes-tu ?";
+    wrapText(ctx, message, canvas.width / 2, 350, 400, 24);
+
+    // Afficher les boutons Oui et Non
+    if (!finalBossMessageShown && finalBossOpacity >= 1) {
+        createChoiceButtons();
+        finalBossMessageShown = true;
+    }
+};
+
+// Fonction pour gérer le texte multi-ligne
+const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
+    let words = text.split(' ');
+    let line = '';
+    for(let n = 0; n < words.length; n++) {
+        let testLine = line + words[n] + ' ';
+        let metrics = context.measureText(testLine);
+        let testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+            context.fillText(line, x, y);
+            line = words[n] + ' ';
+            y += lineHeight;
+        }
+        else {
+            line = testLine;
+        }
+    }
+    context.fillText(line, x, y);
+};
+
+// Créer les boutons de choix Oui et Non
+const createChoiceButtons = () => {
+    // Créer le bouton Oui
+    const yesButton = document.createElement('button');
+    yesButton.innerText = 'Oui';
+    yesButton.style.position = 'absolute';
+    yesButton.style.left = '40%';
+    yesButton.style.top = '70%';
+    yesButton.style.padding = '10px 20px';
+    yesButton.style.fontSize = '18px';
+    document.body.appendChild(yesButton);
+
+    // Créer le bouton Non
+    const noButton = document.createElement('button');
+    noButton.innerText = 'Non';
+    noButton.style.position = 'absolute';
+    noButton.style.left = '55%';
+    noButton.style.top = '70%';
+    noButton.style.padding = '10px 20px';
+    noButton.style.fontSize = '18px';
+    document.body.appendChild(noButton);
+
+    // Gestion des clics sur les boutons
+    yesButton.addEventListener('click', () => {
+        finalBossResponse = 'Oui';
+        document.body.removeChild(yesButton);
+        document.body.removeChild(noButton);
+        showFinalMessage();
+    });
+
+    noButton.addEventListener('click', () => {
+        finalBossResponse = 'Non';
+        document.body.removeChild(yesButton);
+        document.body.removeChild(noButton);
+        showFinalMessage();
+    });
+};
+
+// Afficher le message final
+const showFinalMessage = () => {
+    finalMessageDisplayed = true;
+
+    // Débloquer les niveaux 3 et 4
+    let unlockedLevels = JSON.parse(localStorage.getItem('unlockedLevels')) || [1];
+    if (!unlockedLevels.includes(3)) {
+        unlockedLevels.push(3);
+    }
+    if (!unlockedLevels.includes(4)) {
+        unlockedLevels.push(4);
+    }
+    localStorage.setItem('unlockedLevels', JSON.stringify(unlockedLevels));
+
+    setTimeout(() => {
+        window.location.href = 'index.html'; // Rediriger vers le menu de sélection de niveau
+    }, 3000);
+};
+
+// Rendu du message final
+const renderFinalMessage = () => {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'white';
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = 'center';
+    let finalMessage = "Nous n'y sommes pas encore ! C'est le scénario rêvé et pour y arriver nous avons besoin de votre soutien... Merci à tous";
+    wrapText(ctx, finalMessage, canvas.width / 2, canvas.height / 2 - 50, 400, 30);
+};
+
+// Fonction de rendu principal
 const render = () => {
     if (pause) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-    if (boss) updateBoss();
-    updateMissiles();
-    updateDamageText();
-    drawMetalPlates();
-    drawLoadingBar();
-
-    if (gamePlaying && !gameOver) {
-        ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
-
-        if (Date.now() - lastMissileTime > 1600 && bossAttacking) {
-            fireMissile();
-            lastMissileTime = Date.now();
+    if (endSequence) {
+        // Gestion de la séquence de fin
+        renderScrollingText();
+    } else if (finalBossSequence) {
+        if (finalMessageDisplayed) {
+            renderFinalMessage();
+        } else {
+            // Gestion de la séquence du boss final
+            renderFinalBossSequence();
         }
-
-        if (Date.now() - lastBossMissileTime > 3000 && bossAttacking) {
-            fireBossMissile();
-            lastBossMissileTime = Date.now();
-        }
-
-        if (attack.active) {
-            ctx.drawImage(attackImg, attack.x, attack.y, attack.width, attack.height);
-        }
-
-        if (impactEffect.active) {
-            ctx.globalAlpha = impactEffect.opacity;
-            ctx.drawImage(impactImg, impactEffect.x, impactEffect.y, 200, 200);
-            ctx.globalAlpha = 1.0;
-        }
-
-        ctx.fillStyle = 'white';
-        ctx.fillText(`Score: ${score}`, 10, 50);
-        ctx.font = "bold 30px courier";
-    } else if (gameOver) {
-        ctx.fillStyle = 'white';
-        ctx.fillText(`Game Over`, canvas.width / 2 - 70, canvas.height / 2 - 50);
-        ctx.fillText(`Score: ${score}`, canvas.width / 2 - 50, canvas.height / 2);
-        ctx.fillText(`Click to Restart`, canvas.width / 2 - 100, canvas.height / 2 + 50);
-        ctx.font = "bold 30px courier";
-        loadingBar.active = false;
-        loadingBar.flashing = false;
     } else {
-        ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
-        ctx.fillStyle = 'white';
-        ctx.fillText('Click to Start', 90, 535);
-        ctx.font = "bold 30px courier";
+        // Code existant pour le rendu du jeu
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+        if (boss) updateBoss();
+        updateMissiles();
+        updateDamageText();
+        drawMetalPlates();
+        drawLoadingBar();
+
+        if (gamePlaying && !gameOver) {
+            ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
+
+            if (Date.now() - lastMissileTime > 1600 && bossAttacking) {
+                fireMissile();
+                lastMissileTime = Date.now();
+            }
+
+            if (Date.now() - lastBossMissileTime > 3000 && bossAttacking) {
+                fireBossMissile();
+                lastBossMissileTime = Date.now();
+            }
+
+            if (attack.active) {
+                ctx.drawImage(attackImg, attack.x, attack.y, attack.width, attack.height);
+            }
+
+            if (impactEffect.active) {
+                ctx.globalAlpha = impactEffect.opacity;
+                ctx.drawImage(impactImg, impactEffect.x, impactEffect.y, 200, 200);
+                ctx.globalAlpha = 1.0;
+            }
+
+            ctx.fillStyle = 'white';
+            ctx.font = "bold 30px courier";
+            ctx.fillText(`Score: ${score}`, 10, 50);
+
+        } else if (gameOver) {
+            ctx.fillStyle = 'white';
+            ctx.font = "bold 30px courier";
+            ctx.fillText(`Game Over`, canvas.width / 2 - 70, canvas.height / 2 - 50);
+            ctx.fillText(`Score: ${score}`, canvas.width / 2 - 50, canvas.height / 2);
+            ctx.fillText(`Cliquez pour recommencer`, canvas.width / 2 - 150, canvas.height / 2 + 50);
+
+            // Réinitialiser certaines variables
+            loadingBar.active = false;
+            loadingBar.flashing = false;
+        } else {
+            // Écran d'accueil avant le démarrage du jeu
+            ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
+            ctx.fillStyle = 'white';
+            ctx.font = "bold 30px courier";
+            ctx.fillText('Cliquez pour démarrer', 90, 535);
+        }
     }
 
     window.requestAnimationFrame(render);
 };
 
+// Chargement initial
 bgImg.onload = () => {
     resizeGame();
     window.requestAnimationFrame(render);
 };
 
+// Gestion des mouvements de l'étoile
 canvas.addEventListener('mousemove', (e) => {
-    if (gamePlaying && !gameOver) {
+    if (gamePlaying && !gameOver && !endSequence && !finalBossSequence) {
         starX = e.clientX - canvas.getBoundingClientRect().left - starWidth / 2;
         starY = e.clientY - canvas.getBoundingClientRect().top - starHeight / 2;
     }
 });
 
 canvas.addEventListener('touchmove', (e) => {
-    if (gamePlaying && !gameOver) {
+    if (gamePlaying && !gameOver && !endSequence && !finalBossSequence) {
         const touch = e.touches[0];
         starX = touch.clientX - canvas.getBoundingClientRect().left - starWidth / 2;
         starY = touch.clientY - canvas.getBoundingClientRect().top - starHeight / 2;
@@ -410,7 +606,7 @@ canvas.addEventListener('touchmove', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-    if (!gamePlaying || gameOver || pause) return;
+    if (!gamePlaying || gameOver || pause || endSequence || finalBossSequence) return;
     switch (e.key) {
         case 'ArrowUp':
             starY -= 10;
@@ -429,8 +625,9 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// Gestion des clics pour démarrer ou redémarrer le jeu
 document.addEventListener('click', () => {
-    if (!gamePlaying && !gameOver) {
+    if (!gamePlaying && !gameOver && !endSequence && !finalBossSequence) {
         gamePlaying = true;
         gameOver = false;
         starX = (canvas.width / 2) - (starWidth / 2);
@@ -450,6 +647,7 @@ document.addEventListener('click', () => {
             health: 50,
         };
         missiles = [];
+        bossMissiles = [];
         damageText = [];
         attack.active = false;
         score = 0;
