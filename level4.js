@@ -412,6 +412,8 @@ const startEndSequence = () => {
     endSequence = true;
 };
 
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
 // Afficher le texte défilant des crédits
 const renderScrollingText = () => {
     ctx.fillStyle = 'black';
@@ -434,6 +436,9 @@ const renderScrollingText = () => {
         ctx.fillText(line, canvas.width / 2, y);
     });
     ctx.globalAlpha = 1.0;
+
+        // Augmenter la vitesse de défilement uniquement sur mobile
+        creditsY -= isMobile ? 1.0 : 0.5; // 1.0 pour mobile, 0.5 pour desktop
 
     creditsY -= 0.5;
 
@@ -495,6 +500,7 @@ const createChoiceButtons = () => {
     yesButton.style.top = '70%';
     yesButton.style.padding = '10px 20px';
     yesButton.style.fontSize = '18px';
+    yesButton.style.marginRight = '100px';
     document.body.appendChild(yesButton);
 
     const noButton = document.createElement('button');
@@ -504,6 +510,7 @@ const createChoiceButtons = () => {
     noButton.style.top = '70%';
     noButton.style.padding = '10px 20px';
     noButton.style.fontSize = '18px';
+    noButton.style.marginLeft = '20px';
     document.body.appendChild(noButton);
 
     yesButton.addEventListener('click', () => {
@@ -536,7 +543,7 @@ const showFinalMessage = () => {
 
     setTimeout(() => {
         window.location.href = 'index.html';
-    }, 3000);
+    }, 7000);
 };
 
 // Rendu du message final
@@ -597,7 +604,7 @@ const render = () => {
 
             ctx.fillStyle = 'white';
             ctx.font = "bold 30px courier";
-            ctx.fillText(`Score: ${score}`, 10, 50);
+            ctx.fillText(`Score: ${score}`, 80, 50);
         } else if (gameOver) {
             ctx.fillStyle = 'white';
             ctx.font = "bold 30px courier";
@@ -685,7 +692,6 @@ document.addEventListener('click', () => {
         bossMissiles = [];
         damageText = [];
         attack.active = false;
-        score = 0;
         loadingBar.active = false;
         loadingBar.flashing = false;
         bossAttacking = true;

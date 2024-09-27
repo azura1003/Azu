@@ -4,17 +4,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const level3Button = document.getElementById('level3-button');
     const level4Button = document.getElementById('level4-button');
 
-    // Récupérer les niveaux débloqués du localStorage
-    let unlockedLevels = JSON.parse(localStorage.getItem('unlockedLevels')) || [1];
+    // Débloquer tous les niveaux par défaut
+    let unlockedLevels = [1, 2, 3, 4]; // Tous les niveaux sont débloqués
 
-    // Pour chaque niveau, vérifier s'il est débloqué
+    // Activer les boutons de niveau
     for (let level = 1; level <= 4; level++) {
         const levelButton = document.getElementById(`level${level}-button`);
-        if (unlockedLevels.includes(level)) {
-            levelButton.disabled = false;
-        } else {
-            levelButton.disabled = true;
-        }
+        levelButton.disabled = !unlockedLevels.includes(level);
     }
 
     // Gestion des clics sur les boutons de niveau
