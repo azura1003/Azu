@@ -24,6 +24,24 @@ angryImg.src = './img/angry.png';
 impactImg.src = './img/impact.png';
 finalBossImg.src = './img/mark.png';
 
+// Ajout de l'ambiance musicale
+const ambianceAudio = new Audio('./audio/level4-ambiance.mp3');
+ambianceAudio.loop = true;
+ambianceAudio.volume = 0.5;
+
+// Fonction pour démarrer la musique d'ambiance
+const startLevelAmbiance = () => {
+    ambianceAudio.play().catch(error => {
+        console.error("Erreur lors de la lecture de l'audio :", error);
+    });
+};
+
+// Fonction pour arrêter la musique d'ambiance
+const stopLevelAmbiance = () => {
+    ambianceAudio.pause();
+    ambianceAudio.currentTime = 0;
+};
+
 // Variables du jeu
 let endSequence = false;
 let finalBossSequence = false;
@@ -412,6 +430,8 @@ const startEndSequence = () => {
     endSequence = true;
 };
 
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
 // Afficher le texte défilant des crédits
 const renderScrollingText = () => {
     ctx.fillStyle = 'black';
@@ -435,7 +455,7 @@ const renderScrollingText = () => {
     });
     ctx.globalAlpha = 1.0;
 
-    creditsY -= 0.5;
+    creditsY -= isMobile ? 1.0 : 0.5; // 1.0 pour mobile, 0.5 pour desktop
 
     if (creditsY + creditsText.length * lineHeight < 0) {
         endSequence = false;
@@ -495,6 +515,7 @@ const createChoiceButtons = () => {
     yesButton.style.top = '70%';
     yesButton.style.padding = '10px 20px';
     yesButton.style.fontSize = '18px';
+    yesButton.style.marginRight = '100px';
     document.body.appendChild(yesButton);
 
     const noButton = document.createElement('button');
@@ -504,6 +525,7 @@ const createChoiceButtons = () => {
     noButton.style.top = '70%';
     noButton.style.padding = '10px 20px';
     noButton.style.fontSize = '18px';
+    noButton.style.marginLeft = '20px';
     document.body.appendChild(noButton);
 
     yesButton.addEventListener('click', () => {
@@ -536,7 +558,7 @@ const showFinalMessage = () => {
 
     setTimeout(() => {
         window.location.href = 'index.html';
-    }, 3000);
+    }, 7000);
 };
 
 // Rendu du message final
@@ -597,7 +619,7 @@ const render = () => {
 
             ctx.fillStyle = 'white';
             ctx.font = "bold 30px courier";
-            ctx.fillText(`Score: ${score}`, 10, 50);
+            ctx.fillText(`Score: ${score}`, 80, 50);
         } else if (gameOver) {
             ctx.fillStyle = 'white';
             ctx.font = "bold 30px courier";
@@ -665,11 +687,14 @@ document.addEventListener('click', () => {
     if (!gamePlaying && !gameOver && !endSequence && !finalBossSequence) {
         gamePlaying = true;
         gameOver = false;
+        startLevelAmbiance(); // Commence la musique d'ambiance au début du jeu
         starX = (canvas.width / 2) - (starWidth / 2);
         starY = (canvas.height / 2) - (starHeight / 2);
     } else if (gameOver) {
         gamePlaying = true;
         gameOver = false;
+        stopLevelAmbiance(); // Arrête la musique si le jeu se termine
+        startLevelAmbiance(); // Relance la musique si le jeu redémarre
         starX = (canvas.width / 2) - (starWidth / 2);
         starY = (canvas.height / 2) - (starHeight / 2);
         boss = {
@@ -685,7 +710,6 @@ document.addEventListener('click', () => {
         bossMissiles = [];
         damageText = [];
         attack.active = false;
-        score = 0;
         loadingBar.active = false;
         loadingBar.flashing = false;
         bossAttacking = true;

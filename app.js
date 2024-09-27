@@ -20,9 +20,9 @@ bossHaterImg.src = './img/boss-hater.png';
 bossMissileImg.src = './img/poussieresnoir.png';
 equipmentImg.src = './img/wings.png'; // Charger l'image de l'équipement
 
-const ambianceAudio = new Audio('./audio/level1-ambiance.mp3'); // Assurez-vous que le chemin est correct
-ambianceAudio.loop = true; // Répéter l'audio
-ambianceAudio.volume = 0.5; // Ajuster le volume (0.0 à 1.0)
+const ambianceAudio = new Audio('./audio/level1-ambiance.mp3');
+ambianceAudio.loop = true;
+ambianceAudio.volume = 0.5;
 
 // Variables du jeu
 let gamePlaying = false;
@@ -39,21 +39,19 @@ let equipment = null;
 let lastMissileTime = 0;
 let lastBossMissileTime = 0;
 let haters = [];
-let speed = 2.0; // Vitesse du jeu, ajustée dans resizeGame()
+let damageText = []; // Ajouté pour gérer les textes de dommages
+let speed = 2.0;
 
-// Fonction pour démarrer le son d'ambiance du niveau
 const startLevelAmbiance = () => {
     ambianceAudio.play().catch(error => {
         console.error("Erreur lors de la lecture de l'audio :", error);
     });
 };
 
-// Fonction pour arrêter le son d'ambiance
 const stopLevelAmbiance = () => {
     ambianceAudio.pause();
-    ambianceAudio.currentTime = 0; // Remet à zéro pour rejouer depuis le début la prochaine fois
+    ambianceAudio.currentTime = 0;
 };
-
 
 const gravity = 0.5;
 
@@ -68,7 +66,7 @@ const resizeGame = () => {
         initialSize = [canvas.width / 25, canvas.height / 37.5];
         maxSize = [canvas.width / 10, canvas.height / 15];
 
-        speed = 2.5; // Augmenter légèrement la vitesse sur mobile
+        speed = 2.5;
     } else {
         canvas.width = 431;
         canvas.height = 768;
@@ -76,7 +74,7 @@ const resizeGame = () => {
         initialSize = [51 * 0.4, 36 * 0.4];
         maxSize = [51 * 1.2, 36 * 2.0];
 
-        speed = 1.5; // Vitesse par défaut sur les écrans plus grands
+        speed = 1.5;
     }
     starWidth = initialSize[0];
     starHeight = initialSize[1];
@@ -89,10 +87,6 @@ let index = 0,
     score = parseInt(localStorage.getItem('score')) || 0,
     pieces = [],
     startTime = null;
-
-const messages = [];
-
-let messageIndex = 0;
 
 const initPiece = () => {
     pieces.push([
@@ -110,7 +104,7 @@ const checkPieceCollision = (piece) => {
     };
 
     return star.x < piece[0] + 30 && star.x + star.width > piece[0] &&
-           star.y < piece[1] + 30 && star.y + star.height > piece[1];
+        star.y < piece[1] + 30 && star.y + star.height > piece[1];
 };
 
 const checkEquipmentCollision = () => {
@@ -123,9 +117,9 @@ const checkEquipmentCollision = () => {
         };
 
         return star.x < equipment.x + equipment.width &&
-               star.x + star.width > equipment.x &&
-               star.y < equipment.y + equipment.height &&
-               star.y + star.height > equipment.y;
+            star.x + star.width > equipment.x &&
+            star.y < equipment.y + equipment.height &&
+            star.y + star.height > equipment.y;
     }
     return false;
 };
@@ -168,6 +162,9 @@ const updateStarPosition = (x, y) => {
 
 const growStar = () => {
     piecesCollected++;
+    score += 1000; // Les pièces ramassées ajoutent 1000 points
+    localStorage.setItem('score', score);
+
     if (piecesCollected <= 5) {
         const growthFactor = piecesCollected / 5;
         starWidth = initialSize[0] + growthFactor * (maxSize[0] - initialSize[0]);
@@ -186,7 +183,7 @@ const fireMissile = () => {
 
 const updateMissiles = () => {
     missiles.forEach((missile, index) => {
-        missile.x += 3; 
+        missile.x += 3;
         ctx.drawImage(missileImg, missile.x, missile.y, 20, 20);
 
         if (missile.x > canvas.width) {
@@ -208,7 +205,7 @@ const initHater = () => {
 
 const updateHaters = () => {
     haters.forEach((hater, index) => {
-        hater.x -= 1.5; 
+        hater.x -= 1.5;
 
         ctx.fillStyle = "red";
         ctx.fillRect(hater.x, hater.y - 10, hater.width, 5);
@@ -226,6 +223,8 @@ const updateHaters = () => {
             ) {
                 hater.health--;
                 missiles.splice(missileIndex, 1);
+                score += 500; // Les attaques infligent 500 points de score
+                localStorage.setItem('score', score);
 
                 if (hater.health <= 0) {
                     haters.splice(index, 1);
@@ -239,11 +238,37 @@ const updateHaters = () => {
             hater.y < starY + starHeight &&
             hater.y + hater.height > starY
         ) {
-            gameOver = true;
+            score -= 100; // Réduire le score de 100 points en cas de collision
+            localStorage.setItem('score', score);
+            showDamageText("-100 HP");
         }
 
         if (hater.x + hater.width < 0) {
             haters.splice(index, 1);
+        }
+    });
+};
+
+// Fonction pour afficher les textes de dommages
+const showDamageText = (text) => {
+    damageText.push({
+        x: starX + starWidth / 2,
+        y: starY,
+        opacity: 1.0,
+        text: text
+    });
+};
+
+// Mise à jour des textes de dommages
+const updateDamageText = () => {
+    damageText.forEach((text, index) => {
+        ctx.fillStyle = `rgba(255, 0, 0, ${text.opacity})`;
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText(text.text, text.x, text.y);
+        text.y -= 1;
+        text.opacity -= 0.02;
+        if (text.opacity <= 0) {
+            damageText.splice(index, 1);
         }
     });
 };
@@ -254,10 +279,10 @@ const initBoss = () => {
         y: canvas.height / 2 - 60,
         width: 120,
         height: 120,
-        health: 10, // Réduction des PV du boss de 1/3
-        directionY: 1.5 
+        health: 10,
+        directionY: 1.5
     };
-    saveGame(); // Sauvegarder le jeu avant le combat contre le boss
+    saveGame();
 };
 
 const fireBossMissile = () => {
@@ -278,7 +303,7 @@ const fireBossMissile = () => {
 const updateBossMissiles = () => {
     bossMissiles.forEach((missile, index) => {
         missile.x -= 3;
-        missile.y += missile.direction * 1.5; 
+        missile.y += missile.direction * 1.5;
 
         ctx.drawImage(bossMissileImg, missile.x, missile.y, 20, 20);
 
@@ -292,7 +317,9 @@ const updateBossMissiles = () => {
             missile.y < starY + starHeight &&
             missile.y + 20 > starY
         ) {
-            gameOver = true;
+            score -= 100; // Réduire le score de 100 points pour les dégâts reçus
+            localStorage.setItem('score', score);
+            showDamageText("-100 HP");
         }
     });
 };
@@ -310,7 +337,7 @@ const updateBoss = () => {
         ctx.fillStyle = "red";
         ctx.fillRect(boss.x, boss.y - 10, boss.width, 5);
         ctx.fillStyle = "green";
-        ctx.fillRect(boss.x, boss.y - 10, (boss.health / 10) * boss.width, 5); // Ajustement pour les PV
+        ctx.fillRect(boss.x, boss.y - 10, (boss.health / 10) * boss.width, 5);
 
         missiles.forEach((missile, index) => {
             if (
@@ -321,6 +348,8 @@ const updateBoss = () => {
             ) {
                 boss.health--;
                 missiles.splice(index, 1);
+                score += 500; // Les attaques infligent 500 points de score
+                localStorage.setItem('score', score);
 
                 if (boss.health <= 0) {
                     boss = null;
@@ -338,13 +367,7 @@ const updateBoss = () => {
 
 const render = (timestamp) => {
     if (!startTime) startTime = timestamp;
-    if (pause) {
-        return;
-
-        if (gameOver) {
-            stopLevelAmbiance();
-    }
-}
+    if (pause) return;
 
     index++;
     const bgX = -((index * (speed / 2)) % bgImg.width);
@@ -355,7 +378,6 @@ const render = (timestamp) => {
     }
 
     if (gamePlaying && !gameOver && !pieceCollected && timestamp - startTime > 300) {
-        // Mise à jour des pièces
         if (!boss) {
             for (let index = pieces.length - 1; index >= 0; index--) {
                 const piece = pieces[index];
@@ -388,10 +410,8 @@ const render = (timestamp) => {
             }
         }
 
-        // Mise à jour des haters (toujours, même pendant le combat contre le boss)
         updateHaters();
 
-        // Tir de l'étoile
         if (piecesCollected >= 5 && timestamp - lastMissileTime > 1000) {
             fireMissile();
             lastMissileTime = timestamp;
@@ -405,9 +425,9 @@ const render = (timestamp) => {
             equipment = null;
             showMessage("Bravo ! Vous avez battu la démotivation. Vous avez obtenu des ailes qui vont vous aider durant l'étape 2 du projet", () => {
                 localStorage.setItem('level1Completed', 'true');
-                localStorage.setItem('level2Unlocked', 'true'); // Assurez-vous de marquer le niveau 2 comme débloqué
-                localStorage.removeItem('saveGame'); // Supprimer la sauvegarde après victoire
-                window.location.href = 'level2.html'; // Passer directement au niveau 2
+                localStorage.setItem('level2Unlocked', 'true');
+                localStorage.removeItem('saveGame');
+                window.location.href = 'level2.html';
             });
         }
     }
@@ -415,6 +435,8 @@ const render = (timestamp) => {
     if (equipment) {
         ctx.drawImage(equipmentImg, equipment.x, equipment.y, equipment.width, equipment.height);
     }
+
+    updateDamageText();
 
     if (gamePlaying && !gameOver) {
         ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
@@ -450,7 +472,7 @@ const render = (timestamp) => {
 
 bgImg.onload = () => {
     resizeGame();
-    loadGame(); // Charger le jeu si une sauvegarde existe
+    loadGame();
     window.requestAnimationFrame(render);
 };
 
@@ -480,10 +502,8 @@ document.addEventListener('click', () => {
         gamePlaying = true;
 
         if (localStorage.getItem('saveGame')) {
-            // Charger la sauvegarde si elle existe
             loadGame();
         } else {
-            // Réinitialiser le jeu si aucune sauvegarde
             starWidth = initialSize[0];
             starHeight = initialSize[1];
             starX = (canvas.width / 2) - (starWidth / 2);
@@ -512,7 +532,6 @@ setInterval(() => {
     }
 }, 1000);
 
-// Système de sauvegarde
 const saveGame = () => {
     const saveState = {
         piecesCollected,
@@ -544,7 +563,6 @@ const loadGame = () => {
     }
 };
 
-// Bouton pour réinitialiser le jeu
 const resetButton = document.createElement('button');
 resetButton.innerText = "Reset Jeu";
 resetButton.style.position = 'fixed';
