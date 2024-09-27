@@ -199,6 +199,18 @@ const updateMissiles = () => {
             showDamageText("-10 HP");
             gameOver = true;
         }
+
+        // Vérifier si le missile touche une plaque métallique et protéger la zone en dessous
+        metalPlates.forEach(plate => {
+            if (
+                missile.x < plate.x + plate.width &&
+                missile.x + 40 > plate.x &&
+                missile.y < plate.y + plate.height &&
+                missile.y + 40 > plate.y
+            ) {
+                bossMissiles.splice(index, 1); // Supprimer le missile s'il touche une plaque
+            }
+        });
     });
 };
 
@@ -346,6 +358,32 @@ const isStarBehindPlate = () => {
             starY + starHeight > plate.y &&
             starY < plate.y + plate.height
         );
+    });
+};
+
+// Fonction pour gérer les collisions de l'étoile avec les plaques métalliques
+const handleStarCollisionWithPlates = () => {
+    metalPlates.forEach(plate => {
+        // Vérifier si l'étoile entre en collision avec une plaque
+        if (
+            starX < plate.x + plate.width &&
+            starX + starWidth > plate.x &&
+            starY < plate.y + plate.height &&
+            starY + starHeight > plate.y
+        ) {
+            // Empêcher l'étoile de se superposer à la plaque en ajustant sa position
+            if (starX + starWidth / 2 < plate.x + plate.width / 2) {
+                starX = plate.x - starWidth; // Éloigner l'étoile vers la gauche
+            } else {
+                starX = plate.x + plate.width; // Éloigner l'étoile vers la droite
+            }
+
+            if (starY + starHeight / 2 < plate.y + plate.height / 2) {
+                starY = plate.y - starHeight; // Éloigner l'étoile vers le haut
+            } else {
+                starY = plate.y + plate.height; // Éloigner l'étoile vers le bas
+            }
+        }
     });
 };
 
@@ -616,6 +654,7 @@ const render = () => {
             }
 
             renderImpactEffect();
+            handleStarCollisionWithPlates(); // Gérer les collisions de l'étoile avec les plaques métalliques
 
             ctx.fillStyle = 'white';
             ctx.font = "bold 30px courier";
@@ -651,6 +690,7 @@ canvas.addEventListener('mousemove', (e) => {
     if (gamePlaying && !gameOver && !endSequence && !finalBossSequence) {
         starX = e.clientX - canvas.getBoundingClientRect().left - starWidth / 2;
         starY = e.clientY - canvas.getBoundingClientRect().top - starHeight / 2;
+        handleStarCollisionWithPlates(); // Gérer les collisions lors du mouvement
     }
 });
 
@@ -659,6 +699,7 @@ canvas.addEventListener('touchmove', (e) => {
         const touch = e.touches[0];
         starX = touch.clientX - canvas.getBoundingClientRect().left - starWidth / 2;
         starY = touch.clientY - canvas.getBoundingClientRect().top - starHeight / 2;
+        handleStarCollisionWithPlates(); // Gérer les collisions lors du mouvement
     }
 });
 
@@ -680,6 +721,7 @@ document.addEventListener('keydown', (e) => {
         default:
             break;
     }
+    handleStarCollisionWithPlates(); // Gérer les collisions lors du déplacement
 });
 
 // Gestion des clics pour démarrer ou redémarrer le jeu

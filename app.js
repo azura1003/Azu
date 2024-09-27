@@ -41,6 +41,7 @@ let lastBossMissileTime = 0;
 let haters = [];
 let damageText = []; // Ajouté pour gérer les textes de dommages
 let speed = 2.0;
+let pieceInterval = 500; // Intervalle entre chaque génération de pièce
 
 const startLevelAmbiance = () => {
     ambianceAudio.play().catch(error => {
@@ -88,12 +89,20 @@ let index = 0,
     pieces = [],
     startTime = null;
 
-const initPiece = () => {
-    pieces.push([
-        canvas.width + 500 + pieces.length * 200,
-        Math.random() * (canvas.height - 30)
-    ]);
-};
+    const initPiece = () => {
+        // Générer les pièces au centre de l'écran (éviter les extrémités haute et basse)
+        const padding = 500; // Espace à éviter en haut et en bas
+        const minY = padding;
+        const maxY = canvas.height - padding - 30; // 30 est la hauteur de la pièce
+    
+        if (!boss) {
+            pieces.push([
+                canvas.width + 500 + pieces.length * pieceInterval,
+                Math.random() * (maxY - minY) + minY // Générer dans la zone centrale
+            ]);
+            pieceInterval += 100;
+        }
+    };
 
 const checkPieceCollision = (piece) => {
     const star = {
@@ -405,7 +414,7 @@ const render = (timestamp) => {
                     }
                 } else if (piece[0] <= -30) {
                     pieces.splice(index, 1);
-                    initPiece();
+                    if (!boss) initPiece();
                 }
             }
         }

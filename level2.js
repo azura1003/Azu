@@ -38,7 +38,7 @@
     let gamePlaying = false;
     let gameOver = false;
     let pause = false;
-    let validationActive = false; // Nouvelle variable pour activer la validation uniquement quand nécessaire
+    let validationActive = false;
 
     const starWidth = 51 * 1.2;
     const starHeight = 36 * 2.0;
@@ -177,24 +177,24 @@
             'click',
             (e) => {
                 e.stopPropagation();
-                removeMessage(messageDiv);
-                if (callback) callback();
+                removeMessage(messageDiv, callback);
             },
             { once: true }
         );
 
-        // Supprimer le message après un délai
+        // Supprimer le message après un délai et exécuter le callback si présent
         setTimeout(() => {
-            removeMessage(messageDiv);
+            removeMessage(messageDiv, callback);
         }, 5000);
     };
 
-    // Fonction pour supprimer le message
-    const removeMessage = (messageDiv) => {
+    // Fonction pour supprimer le message et exécuter le callback
+    const removeMessage = (messageDiv, callback) => {
         if (messageDiv && messageDiv.parentNode) {
             messageDiv.parentNode.removeChild(messageDiv);
         }
         pause = false;
+        if (callback) callback();
     };
 
     // Fonction pour tirer des missiles
@@ -353,7 +353,7 @@
 
     // Fonction pour dessiner les points de validation
     const drawValidationPoints = () => {
-        const offset = 50; // Ajustez cette valeur pour le décalage vers le centre
+        const offset = 50;
 
         for (let key in validationPoints) {
             const point = validationPoints[key];
@@ -414,6 +414,16 @@
 
     // Dessiner les flèches de la séquence en bas de l'écran
     const drawSequenceArrows = () => {
+        if (arrows.length > 0) {
+            const backgroundX = (canvas.width / 2) - 90;
+            const backgroundY = canvas.height - 102;
+            const backgroundWidth = 250;
+            const backgroundHeight = 70;
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillRect(backgroundX, backgroundY, backgroundWidth, backgroundHeight);
+        }
+
         arrows.forEach((arrow, index) => {
             ctx.fillStyle = arrow.validated ? 'green' : 'gray';
             ctx.font = 'bold 45px Arial';
@@ -638,7 +648,7 @@
             gameOver = false;
             starX = (canvas.width / 2) - (starWidth / 2);
             starY = (canvas.height / 2) - (starHeight / 2);
-            startLevelAmbiance(); // Démarrer l'ambiance
+            startLevelAmbiance();
             showMessage("Les ailes que vous avez récupérées augmentent votre cadence de tir et ajoutent un sort multiple", () => {
                 setTimeout(() => {
                     showMessage("Oh non, une cyberattaque ! Vite, évitez-la sinon notre projet va périr !!", () => {
