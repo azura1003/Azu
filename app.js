@@ -404,7 +404,8 @@ const render = (timestamp) => {
         if (equipment && checkEquipmentCollision()) {
             equipment = null;
             showMessage("Bravo ! Vous avez battu la démotivation. Vous avez obtenu des ailes qui vont vous aider durant l'étape 2 du projet", () => {
-                localStorage.setItem('level2Unlocked', 'true');
+                localStorage.setItem('level1Completed', 'true');
+                localStorage.setItem('level2Unlocked', 'true'); // Assurez-vous de marquer le niveau 2 comme débloqué
                 localStorage.removeItem('saveGame'); // Supprimer la sauvegarde après victoire
                 window.location.href = 'level2.html'; // Passer directement au niveau 2
             });

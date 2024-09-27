@@ -21,6 +21,7 @@
     let gamePlaying = false;
     let gameOver = false;
     let pause = false;
+    let validationActive = false; // Nouvelle variable pour activer la validation uniquement quand nécessaire
 
     const starWidth = 51 * 1.2;
     const starHeight = 36 * 2.0;
@@ -91,7 +92,7 @@
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
                 length: Math.random() * 15 + 10,
-                speed: Math.random() * 2 + 1,
+                speed: Math.random() * 2 + 1
             });
         }
     };
@@ -158,13 +159,25 @@
         messageDiv.addEventListener(
             'click',
             (e) => {
-                e.stopPropagation(); // Empêcher la propagation de l'événement
-                document.body.removeChild(messageDiv);
-                pause = false;
+                e.stopPropagation();
+                removeMessage(messageDiv);
                 if (callback) callback();
             },
             { once: true }
         );
+
+        // Supprimer le message après un délai
+        setTimeout(() => {
+            removeMessage(messageDiv);
+        }, 5000);
+    };
+
+    // Fonction pour supprimer le message
+    const removeMessage = (messageDiv) => {
+        if (messageDiv && messageDiv.parentNode) {
+            messageDiv.parentNode.removeChild(messageDiv);
+        }
+        pause = false;
     };
 
     // Fonction pour tirer des missiles
@@ -203,22 +216,17 @@
             if (performance.now() - waveStartTime > 10000) {
                 clearInterval(spawnInterval);
                 monsterWaveActive = false;
-                showMessage(
-                    "Mais... Mais c'est quoi ça ? On dirait une pâle copie de notre projet !",
-                    () => {
+                showMessage("Mais... Mais c'est quoi ça ? On dirait une pâle copie de notre projet !", () => {
+                    setTimeout(() => {
+                        spawnFakeBoss();
                         setTimeout(() => {
-                            spawnFakeBoss();
-                            setTimeout(() => {
-                                showMessage(
-                                    "Pour vaincre le FakeAzu, vous devez reproduire la séquence de mouvements.",
-                                    () => {
-                                        showMoveSequence();
-                                    }
-                                );
-                            }, 2000);
+                            showMessage("Pour vaincre le FakeAzu, vous devez reproduire la séquence de mouvements.", () => {
+                                validationActive = true; // Active la validation seulement à ce moment
+                                showMoveSequence();
+                            });
                         }, 2000);
-                    }
-                );
+                    }, 2000);
+                });
             } else {
                 const monster = {
                     x: canvas.width,
@@ -328,15 +336,45 @@
 
     // Fonction pour dessiner les points de validation
     const drawValidationPoints = () => {
-        if (!fakeBoss) return; // N'affiche les points qu'après l'apparition du FakeAzu
+        const offset = 50; // Ajustez cette valeur pour le décalage vers le centre
+
         for (let key in validationPoints) {
             const point = validationPoints[key];
+            if (!fakeBoss) continue;
+
+            let adjustedX = point.x;
+            let adjustedY = point.y;
+
+            if (key === 'up') {
+                adjustedY += offset;
+            } else if (key === 'down') {
+                adjustedY -= offset;
+            } else if (key === 'left') {
+                adjustedX += offset;
+            } else if (key === 'right') {
+                adjustedX -= offset;
+            }
+
             ctx.beginPath();
-            ctx.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
+            ctx.arc(adjustedX, adjustedY, point.radius, 0, Math.PI * 2);
             ctx.fillStyle = point.validated ? 'green' : 'white';
             ctx.fill();
             ctx.closePath();
         }
+    };
+
+    // Fonction pour obtenir la position ajustée d'un point
+    const getAdjustedPosition = (key) => {
+        const offset = 50;
+        let x = validationPoints[key].x;
+        let y = validationPoints[key].y;
+
+        if (key === 'up') y += offset;
+        else if (key === 'down') y -= offset;
+        else if (key === 'left') x += offset;
+        else if (key === 'right') x -= offset;
+
+        return { x, y };
     };
 
     // Afficher la séquence de mouvements
@@ -361,7 +399,7 @@
     const drawSequenceArrows = () => {
         arrows.forEach((arrow, index) => {
             ctx.fillStyle = arrow.validated ? 'green' : 'gray';
-            ctx.font = 'bold 45px Arial'; // Grossissement des flèches
+            ctx.font = 'bold 45px Arial';
             ctx.fillText(getArrowSymbol(arrow.direction), (canvas.width / 2) - 60 + index * 50, canvas.height - 50);
         });
     };
@@ -394,6 +432,7 @@
                 removeInputButtons();
                 showMessage("Bravo ! Azufake a disparu !", () => {
                     setTimeout(() => {
+                        localStorage.setItem('level2Completed', 'true');
                         localStorage.setItem('level3Unlocked', 'true');
                         window.location.href = 'level3.html';
                     }, 3000);
@@ -519,11 +558,11 @@
             starX = e.clientX - canvas.getBoundingClientRect().left - starWidth / 2;
             starY = e.clientY - canvas.getBoundingClientRect().top - starHeight / 2;
 
-            if (fakeBoss) {
+            if (validationActive) {
                 for (let key in validationPoints) {
-                    const point = validationPoints[key];
+                    const point = getAdjustedPosition(key);
                     const distance = Math.hypot(starX + starWidth / 2 - point.x, starY + starHeight / 2 - point.y);
-                    if (distance <= point.radius && !point.validated) {
+                    if (distance <= validationPoints[key].radius && !validationPoints[key].validated) {
                         checkMove(key);
                         break;
                     }
@@ -539,11 +578,11 @@
             starX = touch.clientX - canvas.getBoundingClientRect().left - starWidth / 2;
             starY = touch.clientY - canvas.getBoundingClientRect().top - starHeight / 2;
 
-            if (fakeBoss) {
+            if (validationActive) {
                 for (let key in validationPoints) {
-                    const point = validationPoints[key];
+                    const point = getAdjustedPosition(key);
                     const distance = Math.hypot(starX + starWidth / 2 - point.x, starY + starHeight / 2 - point.y);
-                    if (distance <= point.radius && !point.validated) {
+                    if (distance <= validationPoints[key].radius && !validationPoints[key].validated) {
                         checkMove(key);
                         break;
                     }
@@ -582,16 +621,13 @@
             gameOver = false;
             starX = (canvas.width / 2) - (starWidth / 2);
             starY = (canvas.height / 2) - (starHeight / 2);
-            showMessage(
-                "Les ailes que vous avez récupérées augmentent votre cadence de tir et ajoutent un sort multiple",
-                () => {
-                    setTimeout(() => {
-                        showMessage("Oh non, une cyberattaque ! Vite, évitez-la sinon notre projet va périr !!", () => {
-                            initMonsterWave();
-                        });
-                    }, 3000);
-                }
-            );
+            showMessage("Les ailes que vous avez récupérées augmentent votre cadence de tir et ajoutent un sort multiple", () => {
+                setTimeout(() => {
+                    showMessage("Oh non, une cyberattaque ! Vite, évitez-la sinon notre projet va périr !!", () => {
+                        initMonsterWave();
+                    });
+                }, 3000);
+            });
         } else if (gameOver) {
             gamePlaying = true;
             gameOver = false;
