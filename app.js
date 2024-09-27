@@ -1,5 +1,7 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+
+// Chargement des images
 const bgImg = new Image();
 const starImg = new Image();
 const pieceImg = new Image();
@@ -7,7 +9,7 @@ const missileImg = new Image();
 const haterImg = new Image();
 const bossHaterImg = new Image();
 const bossMissileImg = new Image();
-const equipmentImg = new Image(); // New equipment image
+const equipmentImg = new Image(); // Nouvelle image d'équipement
 
 bgImg.src = './img/azura-bg.png';
 starImg.src = './img/static-star.png';
@@ -16,8 +18,13 @@ missileImg.src = './img/poussieres.png';
 haterImg.src = './img/haters.png';
 bossHaterImg.src = './img/boss-hater.png';
 bossMissileImg.src = './img/poussieresnoir.png';
-equipmentImg.src = './img/wings.png'; // Load equipment image
+equipmentImg.src = './img/wings.png'; // Charger l'image de l'équipement
 
+const ambianceAudio = new Audio('./audio/level1-ambiance.mp3'); // Assurez-vous que le chemin est correct
+ambianceAudio.loop = true; // Répéter l'audio
+ambianceAudio.volume = 0.5; // Ajuster le volume (0.0 à 1.0)
+
+// Variables du jeu
 let gamePlaying = false;
 let gameOver = false;
 let pieceCollected = false;
@@ -32,9 +39,23 @@ let equipment = null;
 let lastMissileTime = 0;
 let lastBossMissileTime = 0;
 let haters = [];
+let speed = 2.0; // Vitesse du jeu, ajustée dans resizeGame()
+
+// Fonction pour démarrer le son d'ambiance du niveau
+const startLevelAmbiance = () => {
+    ambianceAudio.play().catch(error => {
+        console.error("Erreur lors de la lecture de l'audio :", error);
+    });
+};
+
+// Fonction pour arrêter le son d'ambiance
+const stopLevelAmbiance = () => {
+    ambianceAudio.pause();
+    ambianceAudio.currentTime = 0; // Remet à zéro pour rejouer depuis le début la prochaine fois
+};
+
 
 const gravity = 0.5;
-const speed = 2.0; // Ajustement de la vitesse globale pour correspondre au niveau 2
 
 let initialSize, maxSize, starWidth, starHeight;
 let starX, starY;
@@ -46,12 +67,16 @@ const resizeGame = () => {
 
         initialSize = [canvas.width / 25, canvas.height / 37.5];
         maxSize = [canvas.width / 10, canvas.height / 15];
+
+        speed = 2.5; // Augmenter légèrement la vitesse sur mobile
     } else {
         canvas.width = 431;
         canvas.height = 768;
 
         initialSize = [51 * 0.4, 36 * 0.4];
         maxSize = [51 * 1.2, 36 * 2.0];
+
+        speed = 1.5; // Vitesse par défaut sur les écrans plus grands
     }
     starWidth = initialSize[0];
     starHeight = initialSize[1];
@@ -120,7 +145,7 @@ const showMessage = (message, callback) => {
     messageDiv.style.zIndex = '1000';
     messageDiv.innerHTML = message;
     document.body.appendChild(messageDiv);
-    document.addEventListener('click', () => {
+    messageDiv.addEventListener('click', () => {
         document.body.removeChild(messageDiv);
         pieceCollected = false;
         pause = false;
@@ -130,7 +155,7 @@ const showMessage = (message, callback) => {
 };
 
 const showWelcomeMessage = () => {
-    showMessage('Bienvenue<br>l/etoile<br> représente le projet<br> azura vivez<br> notre aventure', () => {
+    showMessage('Bienvenue<br>L\'étoile représente le projet Azura<br>Vivez notre aventure', () => {
         gamePlaying = true;
         startTime = performance.now();
     });
@@ -229,7 +254,7 @@ const initBoss = () => {
         y: canvas.height / 2 - 60,
         width: 120,
         height: 120,
-        health: 15,
+        health: 10, // Réduction des PV du boss de 1/3
         directionY: 1.5 
     };
     saveGame(); // Sauvegarder le jeu avant le combat contre le boss
@@ -285,7 +310,7 @@ const updateBoss = () => {
         ctx.fillStyle = "red";
         ctx.fillRect(boss.x, boss.y - 10, boss.width, 5);
         ctx.fillStyle = "green";
-        ctx.fillRect(boss.x, boss.y - 10, (boss.health / 15) * boss.width, 5);
+        ctx.fillRect(boss.x, boss.y - 10, (boss.health / 10) * boss.width, 5); // Ajustement pour les PV
 
         missiles.forEach((missile, index) => {
             if (
@@ -315,7 +340,11 @@ const render = (timestamp) => {
     if (!startTime) startTime = timestamp;
     if (pause) {
         return;
+
+        if (gameOver) {
+            stopLevelAmbiance();
     }
+}
 
     index++;
     const bgX = -((index * (speed / 2)) % bgImg.width);
@@ -326,49 +355,57 @@ const render = (timestamp) => {
     }
 
     if (gamePlaying && !gameOver && !pieceCollected && timestamp - startTime > 300) {
-        pieces.forEach((piece, index) => {
-            piece[0] -= speed;
-            ctx.drawImage(pieceImg, piece[0], piece[1], 30, 30);
-            if (checkPieceCollision(piece)) {
-                pieces.splice(index, 1);
-                piecesPassed++;
-                growStar();
+        // Mise à jour des pièces
+        if (!boss) {
+            for (let index = pieces.length - 1; index >= 0; index--) {
+                const piece = pieces[index];
+                piece[0] -= speed;
+                ctx.drawImage(pieceImg, piece[0], piece[1], 30, 30);
+                if (checkPieceCollision(piece)) {
+                    pieces.splice(index, 1);
+                    piecesPassed++;
+                    growStar();
 
-                if (piecesCollected === 1) {
-                    showMessage("Hey, Collectez<br> les pieces pour<br> faire grossir <br> l'étoile", initPiece);
-                } else if (piecesCollected === 5) {
-                    showMessage("Bravo! ce que<br> vous avez collecté<br> represente notre<br> fiancement initial<br> par fonds propres", () => {
-                        showMessage("Attention! Les haters arrivent!", () => {
-                            haterMessageShown = true;
-                            for (let i = 0; i < 5; i++) {
-                                setTimeout(initHater, i * 1000);
-                            }
-                            setTimeout(initBoss, 6000);
+                    if (piecesCollected === 1) {
+                        showMessage("Hey, collectez les pièces pour faire grossir l'étoile", initPiece);
+                    } else if (piecesCollected === 5) {
+                        showMessage("Bravo ! Ce que vous avez collecté représente notre financement initial par fonds propres", () => {
+                            showMessage("Attention ! Les haters arrivent !", () => {
+                                haterMessageShown = true;
+                                for (let i = 0; i < 5; i++) {
+                                    setTimeout(initHater, i * 1000);
+                                }
+                                setTimeout(initBoss, 6000);
+                            });
                         });
-                    });
-                } else if (piecesCollected < 5) {
+                    } else if (piecesCollected < 5) {
+                        initPiece();
+                    }
+                } else if (piece[0] <= -30) {
+                    pieces.splice(index, 1);
                     initPiece();
                 }
-            } else if (piece[0] <= -30) {
-                pieces.splice(index, 1);
-                initPiece();
             }
-        });
+        }
 
+        // Mise à jour des haters (toujours, même pendant le combat contre le boss)
+        updateHaters();
+
+        // Tir de l'étoile
         if (piecesCollected >= 5 && timestamp - lastMissileTime > 1000) {
             fireMissile();
             lastMissileTime = timestamp;
         }
 
         updateMissiles();
-        updateHaters();
         updateBoss();
         updateBossMissiles();
 
         if (equipment && checkEquipmentCollision()) {
             equipment = null;
-            showMessage("Bravo vous avez battu la démotivation, vous avez obtenu des ailes qui vont vous aider durant l'étape 2 du projet", () => {
-                localStorage.setItem('level2Unlocked', 'true');
+            showMessage("Bravo ! Vous avez battu la démotivation. Vous avez obtenu des ailes qui vont vous aider durant l'étape 2 du projet", () => {
+                localStorage.setItem('level1Completed', 'true');
+                localStorage.setItem('level2Unlocked', 'true'); // Assurez-vous de marquer le niveau 2 comme débloqué
                 localStorage.removeItem('saveGame'); // Supprimer la sauvegarde après victoire
                 window.location.href = 'level2.html'; // Passer directement au niveau 2
             });
@@ -382,28 +419,28 @@ const render = (timestamp) => {
     if (gamePlaying && !gameOver) {
         ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
         ctx.fillStyle = 'white';
-        ctx.fillText(`Score: ${score}`, 10, 50);
         ctx.font = "bold 30px courier";
+        ctx.fillText(`Score: ${score}`, 10, 50);
     } else if (gameOver) {
         ctx.fillStyle = 'white';
+        ctx.font = "bold 30px courier";
         ctx.fillText(`Game Over`, canvas.width / 2 - 70, canvas.height / 2 - 50);
         ctx.fillText(`Score: ${score}`, canvas.width / 2 - 50, canvas.height / 2);
-        ctx.fillText(`Click to Restart`, canvas.width / 2 - 100, canvas.height / 2 + 50);
-        ctx.font = "bold 30px courier";
+        ctx.fillText(`Cliquez pour recommencer`, canvas.width / 2 - 150, canvas.height / 2 + 50);
     } else if (pieceCollected) {
         ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
         pieces.forEach(piece => {
             ctx.drawImage(pieceImg, piece[0], piece[1], 30, 30);
         });
         ctx.fillStyle = 'white';
-        ctx.fillText(`Score: ${score}`, 10, 50);
         ctx.font = "bold 30px courier";
+        ctx.fillText(`Score: ${score}`, 10, 50);
     } else {
         ctx.drawImage(starImg, starX, starY, starWidth, starHeight);
         ctx.fillStyle = 'white';
-        ctx.fillText(`meilleur score: ${meilleurScore}`, 85, 245);
-        ctx.fillText('cliquez pour jouer', 90, 535);
         ctx.font = "bold 30px courier";
+        ctx.fillText(`Meilleur score: ${meilleurScore}`, 55, 245);
+        ctx.fillText('Cliquez pour jouer', 60, 535);
     }
 
     if (!pieceCollected) {
@@ -437,31 +474,39 @@ canvas.addEventListener('touchmove', (e) => {
 document.addEventListener('click', () => {
     if (!gamePlaying && !gameOver && !pieceCollected) {
         showWelcomeMessage();
+        startLevelAmbiance();
     } else if (gameOver) {
-        gamePlaying = true;
         gameOver = false;
-        starWidth = initialSize[0];
-        starHeight = initialSize[1];
-        starX = (canvas.width / 2) - (starWidth / 2);
-        starY = (canvas.height / 2) - (starHeight / 2);
-        score = 0;
-        piecesPassed = 0;
-        piecesCollected = 0;
-        haterMessageShown = false;
-        pieces = [];
-        boss = null;
-        bossMissiles = [];
-        haters = [];
-        equipment = null;
-        initPiece();
-        startTime = null;
-        missiles = [];
-        loadGame(); // Charger le jeu si une sauvegarde existe
+        gamePlaying = true;
+
+        if (localStorage.getItem('saveGame')) {
+            // Charger la sauvegarde si elle existe
+            loadGame();
+        } else {
+            // Réinitialiser le jeu si aucune sauvegarde
+            starWidth = initialSize[0];
+            starHeight = initialSize[1];
+            starX = (canvas.width / 2) - (starWidth / 2);
+            starY = (canvas.height / 2) - (starHeight / 2);
+            score = 0;
+            piecesPassed = 0;
+            piecesCollected = 0;
+            haterMessageShown = false;
+            pieces = [];
+            boss = null;
+            bossMissiles = [];
+            haters = [];
+            equipment = null;
+            initPiece();
+            startTime = null;
+            missiles = [];
+            startLevelAmbiance();
+        }
     }
 });
 
 setInterval(() => {
-    if (boss && Date.now() - lastBossMissileTime > 1000) {
+    if (boss && Date.now() - lastBossMissileTime > 2000) {
         fireBossMissile();
         lastBossMissileTime = Date.now();
     }
