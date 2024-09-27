@@ -10,7 +10,7 @@ const metalImg = new Image();
 const attackImg = new Image();
 const bossMissileImg = new Image();
 const angryImg = new Image();
-const impactImg = new Image(); // Image de l'impact
+const impactImg = new Image();
 const finalBossImg = new Image();
 
 bgImg.src = './img/usa.png';
@@ -21,7 +21,7 @@ metalImg.src = './img/metal.png';
 attackImg.src = './img/bande.png';
 bossMissileImg.src = './img/dislike.png';
 angryImg.src = './img/angry.png';
-impactImg.src = './img/impact.png'; // Charger l'image de l'impact
+impactImg.src = './img/impact.png';
 finalBossImg.src = './img/mark.png';
 
 // Variables du jeu
@@ -30,6 +30,8 @@ let finalBossSequence = false;
 let gamePlaying = false;
 let gameOver = false;
 let pause = false;
+let showMessage = true;
+let showTip = false;
 let starWidth = 51 * 1.2;
 let starHeight = 36 * 2.0;
 let starX, starY;
@@ -87,6 +89,10 @@ let finalBossMessageShown = false;
 let finalBossResponse = '';
 let finalMessageDisplayed = false;
 let finalBossOpacity = 0;
+
+// Messages d'introduction
+const introMessage = "Nous y sommes c'est le dernier niveau, tu vas affronter tes concurrents, n'oublie pas autrefois ils étaient comme toi";
+const tipMessage = "Astuce : Les briques vous protègent des dégâts";
 
 // Fonction pour redimensionner le jeu
 const resizeGame = () => {
@@ -276,8 +282,9 @@ const drawMetalPlates = () => {
     });
 };
 
-// Démarrer l'attaque du boss
+// Démarrer l'attaque du boss avec plus de bandes
 const startBossAttack = () => {
+    if (loadingBar.progress >= 100) return; // Arrête la génération des bandes si le pouvoir est chargé à 100%
     attack.active = true;
     attack.y = -attack.height;
 
@@ -294,6 +301,9 @@ const startBossAttack = () => {
             attack.direction = attack.direction === 'left' ? 'right' : 'left';
             attack.x = attack.direction === 'left' ? 0 : canvas.width - attack.width;
             clearInterval(attackInterval);
+
+            // Redémarre l'attaque pour augmenter la fréquence des bandes
+            setTimeout(startBossAttack, 2000);
         }
 
         if (
@@ -321,6 +331,31 @@ const isStarBehindPlate = () => {
     });
 };
 
+// Affichage des messages d'introduction
+const renderIntroMessage = () => {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+
+    // Affichage du premier message
+    if (showMessage) {
+        wrapText(ctx, introMessage, canvas.width / 2, canvas.height / 2 - 40, 400, 20);
+        setTimeout(() => {
+            showMessage = false;
+            showTip = true;
+        }, 6000); // Affiche le message pendant 6 secondes
+    } else if (showTip) {
+        // Affichage du message d'astuce
+        wrapText(ctx, tipMessage, canvas.width / 2, canvas.height / 2 - 40, 400, 20);
+        setTimeout(() => {
+            showTip = false;
+            gamePlaying = true;
+        }, 5000); // Affiche l'astuce pendant 5 secondes
+    }
+};
+
 // Collision de l'étoile avec le boss
 const starCollisionWithBoss = () => {
     const collisionInterval = setInterval(() => {
@@ -334,21 +369,17 @@ const starCollisionWithBoss = () => {
             starY + starHeight > boss.y &&
             starY < boss.y + boss.height
         ) {
-            // Capture la position du boss avant de le supprimer
             impactEffect.active = true;
             impactEffect.x = boss.x;
             impactEffect.y = boss.y;
 
-            // Supprime le boss et affiche l'impact
             boss = null;
+            clearInterval(collisionInterval);
 
-            // Continue le rendu pour afficher l'impact pendant 3 secondes
             setTimeout(() => {
                 impactEffect.active = false;
                 startAfterImpactSequence();
             }, 3000);
-
-            clearInterval(collisionInterval);
         } else {
             starX += (boss.x - starX) * 0.02;
             starY += (boss.y - starY) * 0.02;
@@ -526,7 +557,9 @@ const render = () => {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (endSequence) {
+    if (showMessage || showTip) {
+        renderIntroMessage();
+    } else if (endSequence) {
         renderScrollingText();
     } else if (finalBossSequence) {
         if (finalMessageDisplayed) {

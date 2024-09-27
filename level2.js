@@ -91,7 +91,7 @@
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
                 length: Math.random() * 15 + 10,
-                speed: Math.random() * 2 + 1
+                speed: Math.random() * 2 + 1,
             });
         }
     };
@@ -203,16 +203,22 @@
             if (performance.now() - waveStartTime > 10000) {
                 clearInterval(spawnInterval);
                 monsterWaveActive = false;
-                showMessage("Mais... Mais c'est quoi ça ? On dirait une pâle copie de notre projet !", () => {
-                    setTimeout(() => {
-                        spawnFakeBoss();
+                showMessage(
+                    "Mais... Mais c'est quoi ça ? On dirait une pâle copie de notre projet !",
+                    () => {
                         setTimeout(() => {
-                            showMessage("Pour vaincre le FakeAzu, vous devez reproduire la séquence de mouvements.", () => {
-                                showMoveSequence();
-                            });
+                            spawnFakeBoss();
+                            setTimeout(() => {
+                                showMessage(
+                                    "Pour vaincre le FakeAzu, vous devez reproduire la séquence de mouvements.",
+                                    () => {
+                                        showMoveSequence();
+                                    }
+                                );
+                            }, 2000);
                         }, 2000);
-                    }, 2000);
-                });
+                    }
+                );
             } else {
                 const monster = {
                     x: canvas.width,
@@ -322,9 +328,9 @@
 
     // Fonction pour dessiner les points de validation
     const drawValidationPoints = () => {
+        if (!fakeBoss) return; // N'affiche les points qu'après l'apparition du FakeAzu
         for (let key in validationPoints) {
             const point = validationPoints[key];
-            if (!fakeBoss) continue; // N'affiche les points qu'après le FakeAzu
             ctx.beginPath();
             ctx.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
             ctx.fillStyle = point.validated ? 'green' : 'white';
@@ -513,12 +519,14 @@
             starX = e.clientX - canvas.getBoundingClientRect().left - starWidth / 2;
             starY = e.clientY - canvas.getBoundingClientRect().top - starHeight / 2;
 
-            for (let key in validationPoints) {
-                const point = validationPoints[key];
-                const distance = Math.hypot(starX + starWidth / 2 - point.x, starY + starHeight / 2 - point.y);
-                if (distance <= point.radius && !point.validated) {
-                    checkMove(key);
-                    break;
+            if (fakeBoss) {
+                for (let key in validationPoints) {
+                    const point = validationPoints[key];
+                    const distance = Math.hypot(starX + starWidth / 2 - point.x, starY + starHeight / 2 - point.y);
+                    if (distance <= point.radius && !point.validated) {
+                        checkMove(key);
+                        break;
+                    }
                 }
             }
         }
@@ -531,12 +539,14 @@
             starX = touch.clientX - canvas.getBoundingClientRect().left - starWidth / 2;
             starY = touch.clientY - canvas.getBoundingClientRect().top - starHeight / 2;
 
-            for (let key in validationPoints) {
-                const point = validationPoints[key];
-                const distance = Math.hypot(starX + starWidth / 2 - point.x, starY + starHeight / 2 - point.y);
-                if (distance <= point.radius && !point.validated) {
-                    checkMove(key);
-                    break;
+            if (fakeBoss) {
+                for (let key in validationPoints) {
+                    const point = validationPoints[key];
+                    const distance = Math.hypot(starX + starWidth / 2 - point.x, starY + starHeight / 2 - point.y);
+                    if (distance <= point.radius && !point.validated) {
+                        checkMove(key);
+                        break;
+                    }
                 }
             }
         }
@@ -572,13 +582,16 @@
             gameOver = false;
             starX = (canvas.width / 2) - (starWidth / 2);
             starY = (canvas.height / 2) - (starHeight / 2);
-            showMessage("Les ailes que vous avez récupérées augmentent votre cadence de tir et ajoutent un sort multiple", () => {
-                setTimeout(() => {
-                    showMessage("Oh non, une cyberattaque ! Vite, évitez-la sinon notre projet va périr !!", () => {
-                        initMonsterWave();
-                    });
-                }, 3000);
-            });
+            showMessage(
+                "Les ailes que vous avez récupérées augmentent votre cadence de tir et ajoutent un sort multiple",
+                () => {
+                    setTimeout(() => {
+                        showMessage("Oh non, une cyberattaque ! Vite, évitez-la sinon notre projet va périr !!", () => {
+                            initMonsterWave();
+                        });
+                    }, 3000);
+                }
+            );
         } else if (gameOver) {
             gamePlaying = true;
             gameOver = false;
