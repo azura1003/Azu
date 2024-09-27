@@ -17,6 +17,23 @@
     fakeBossImg.src = './img/fake.png';
     rainImg.src = './img/rain1.png';
 
+    // Chargement de la musique d'ambiance
+    const ambianceAudio = new Audio('./audio/level2-ambiance.mp3');
+    ambianceAudio.loop = true;
+    ambianceAudio.volume = 0.5;
+
+    // Fonctions pour démarrer et arrêter la musique d'ambiance
+    const startLevelAmbiance = () => {
+        ambianceAudio.play().catch(error => {
+            console.error("Erreur lors de la lecture de l'audio :", error);
+        });
+    };
+
+    const stopLevelAmbiance = () => {
+        ambianceAudio.pause();
+        ambianceAudio.currentTime = 0;
+    };
+
     // Variables de jeu
     let gamePlaying = false;
     let gameOver = false;
@@ -621,6 +638,7 @@
             gameOver = false;
             starX = (canvas.width / 2) - (starWidth / 2);
             starY = (canvas.height / 2) - (starHeight / 2);
+            startLevelAmbiance(); // Démarrer l'ambiance
             showMessage("Les ailes que vous avez récupérées augmentent votre cadence de tir et ajoutent un sort multiple", () => {
                 setTimeout(() => {
                     showMessage("Oh non, une cyberattaque ! Vite, évitez-la sinon notre projet va périr !!", () => {
