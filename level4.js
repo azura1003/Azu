@@ -24,6 +24,24 @@ angryImg.src = './img/angry.png';
 impactImg.src = './img/impact.png';
 finalBossImg.src = './img/mark.png';
 
+// Ajout de l'ambiance musicale
+const ambianceAudio = new Audio('./audio/level4-ambiance.mp3');
+ambianceAudio.loop = true;
+ambianceAudio.volume = 0.5;
+
+// Fonction pour démarrer la musique d'ambiance
+const startLevelAmbiance = () => {
+    ambianceAudio.play().catch(error => {
+        console.error("Erreur lors de la lecture de l'audio :", error);
+    });
+};
+
+// Fonction pour arrêter la musique d'ambiance
+const stopLevelAmbiance = () => {
+    ambianceAudio.pause();
+    ambianceAudio.currentTime = 0;
+};
+
 // Variables du jeu
 let endSequence = false;
 let finalBossSequence = false;
@@ -437,10 +455,7 @@ const renderScrollingText = () => {
     });
     ctx.globalAlpha = 1.0;
 
-        // Augmenter la vitesse de défilement uniquement sur mobile
-        creditsY -= isMobile ? 1.0 : 0.5; // 1.0 pour mobile, 0.5 pour desktop
-
-    creditsY -= 0.5;
+    creditsY -= isMobile ? 1.0 : 0.5; // 1.0 pour mobile, 0.5 pour desktop
 
     if (creditsY + creditsText.length * lineHeight < 0) {
         endSequence = false;
@@ -672,11 +687,14 @@ document.addEventListener('click', () => {
     if (!gamePlaying && !gameOver && !endSequence && !finalBossSequence) {
         gamePlaying = true;
         gameOver = false;
+        startLevelAmbiance(); // Commence la musique d'ambiance au début du jeu
         starX = (canvas.width / 2) - (starWidth / 2);
         starY = (canvas.height / 2) - (starHeight / 2);
     } else if (gameOver) {
         gamePlaying = true;
         gameOver = false;
+        stopLevelAmbiance(); // Arrête la musique si le jeu se termine
+        startLevelAmbiance(); // Relance la musique si le jeu redémarre
         starX = (canvas.width / 2) - (starWidth / 2);
         starY = (canvas.height / 2) - (starHeight / 2);
         boss = {

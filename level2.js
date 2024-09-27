@@ -230,7 +230,7 @@
         monsterWaveActive = true;
         waveStartTime = performance.now();
         const spawnInterval = setInterval(() => {
-            if (performance.now() - waveStartTime > 10000) {
+            if (performance.now() - waveStartTime > 15000) {
                 clearInterval(spawnInterval);
                 monsterWaveActive = false;
                 showMessage("Mais... Mais c'est quoi ça ? On dirait une pâle copie de notre projet !", () => {

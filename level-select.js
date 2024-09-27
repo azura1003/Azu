@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize score to 0 if not present
     let finalScore = localStorage.getItem('score') ? parseInt(localStorage.getItem('score')) : 0;
-    finalScoreDisplay.textContent = `Score Final: ${finalScore}`;
+    finalScoreDisplay.textContent = `Score: ${finalScore}`;
 
     // Unlock all levels by default
     let unlockedLevels = JSON.parse(localStorage.getItem('unlockedLevels')) || [1, 2, 3, 4];
