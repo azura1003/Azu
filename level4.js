@@ -363,28 +363,7 @@ const isStarBehindPlate = () => {
 
 // Fonction pour gérer les collisions de l'étoile avec les plaques métalliques
 const handleStarCollisionWithPlates = () => {
-    metalPlates.forEach(plate => {
-        // Vérifier si l'étoile entre en collision avec une plaque
-        if (
-            starX < plate.x + plate.width &&
-            starX + starWidth > plate.x &&
-            starY < plate.y + plate.height &&
-            starY + starHeight > plate.y
-        ) {
-            // Empêcher l'étoile de se superposer à la plaque en ajustant sa position
-            if (starX + starWidth / 2 < plate.x + plate.width / 2) {
-                starX = plate.x - starWidth; // Éloigner l'étoile vers la gauche
-            } else {
-                starX = plate.x + plate.width; // Éloigner l'étoile vers la droite
-            }
-
-            if (starY + starHeight / 2 < plate.y + plate.height / 2) {
-                starY = plate.y - starHeight; // Éloigner l'étoile vers le haut
-            } else {
-                starY = plate.y + plate.height; // Éloigner l'étoile vers le bas
-            }
-        }
-    });
+    // Permettre à l'étoile de traverser les plaques, mais empêcher les attaques du boss de traverser
 };
 
 // Affichage des messages d'introduction
@@ -654,8 +633,7 @@ const render = () => {
             }
 
             renderImpactEffect();
-            handleStarCollisionWithPlates(); // Gérer les collisions de l'étoile avec les plaques métalliques
-
+            // L'étoile peut traverser les plaques métalliques.
             ctx.fillStyle = 'white';
             ctx.font = "bold 30px courier";
             ctx.fillText(`Score: ${score}`, 80, 50);
